@@ -1,0 +1,145 @@
+{
+	"suppliers": [
+		{ "_id": "1", "name": "Mr, Johnson Business", "__more": "" },
+		{ "_id": "3", "name": "Daddy Yakee", "__more": "" },
+		{ "_id": "2", "name": "Mr, Loki Jeferson", "__more": "" },
+		{ "_id": "4", "name": "Mr, Maxwell Dean", "__more": "" },
+		{ "_id": "5", "name": "Anestesia John", "__more": "" }
+	],
+	"notifications": [
+		{ "_id": "1", "content": "Someone has not paid their debt", "createdAt": "2026-06-23T10:00:00.000Z" }
+	],
+	"products": [
+		{ "_id": "1", "type": "Soap", "name": "Diva soap", "unitBuyingPrice": 205, "__more": "" },
+		{ "_id": "2", "type": "Deodorant", "name": "Diva deodorant", "unitBuyingPrice": 105, "__more": "" },
+		{ "_id": "3", "type": "Deodorant", "name": "Mrs deodorant", "unitBuyingPrice": 405, "__more": "" },
+		{ "_id": "4", "type": "Deodorant", "name": "Sth deodorant", "unitBuyingPrice": 805, "__more": "" },
+		{ "_id": "5", "type": "Deodorant", "name": "Gucci deodorant", "unitBuyingPrice": 905, "__more": "" },
+		{ "_id": "6", "type": "Deodorant", "name": "Dave deodorant", "unitBuyingPrice": 100, "__more": "" },
+		{ "_id": "7", "type": "Deodorant", "name": "Lueveton deodorant", "unitBuyingPrice": 155, "__more": "" },
+		{ "_id": "8", "type": "Soap", "name": "Sincerely yours deodorant", "unitBuyingPrice": 405, "__more": "" },
+		{ "_id": "9", "type": "Soap", "name": "555 deodorant", "unitBuyingPrice": 495, "__more": "" }
+	],
+	"stores": [
+		{
+			"_id": "s",
+			"title": "MacDonald Store",
+			"inventory": [
+				{ "productId": "1", "amount": 200, "approved": false },
+				{ "productId": "2", "amount": 240, "approved": true },
+				{ "productId": "5", "amount": 240, "approved": true },
+				{ "productId": "3", "amount": 40, "approved": false }
+			],
+			"__more": ""
+		},
+		{
+			"_id": "4",
+			"title": "Gucci Store",
+			"inventory": [
+				{ "productId": "5", "amount": 200, "approved": false },
+				{ "productId": "3", "amount": 240, "approved": true },
+				{ "productId": "1", "amount": 240, "approved": true }
+			],
+			"__more": ""
+		}
+	],
+	"customers": [
+		{ "_id": "1", "name": "Mrs, Rink", "__more": "" },
+		{ "_id": "2", "name": "John", "__more": "" },
+		{ "_id": "4", "name": "Doe", "__more": "" },
+		{ "_id": "5", "name": "Zoe", "__more": "" },
+		{ "_id": "6", "name": "Dick", "__more": "" },
+		{ "_id": "7", "name": "Jimmy", "__more": "" },
+		{ "_id": "8", "name": "Rafael", "__more": "" }
+	],
+	"transactions": [
+		{
+			"_id": "1",
+			"storeId": "s",
+			"customerId": "1",
+			"products": [
+				{ "productId": "1", "amount": 500, "unitPrice": 1000, "unitBuyingPrice": 300 }
+			],
+			"totalPrice": 11000,
+			"paidPrice": 10000,
+			"paymentStatus": "Partial",
+			"shouldBePaidBeforeDate": "2026-07-01T00:00:00.000Z",
+			"isOutOfStore": false,
+			"createdAt": "2026-06-20T08:00:00.000Z",
+			"comment": "Customer needed extra time to pay the rest."
+		},
+		{
+			"_id": "2",
+			"storeId": "s",
+			"customerId": "2",
+			"products": [
+				{ "productId": "4", "amount": 900, "unitPrice": 10000, "unitBuyingPrice": 3000 }
+			],
+			"totalPrice": 110000,
+			"paidPrice": 110000,
+			"paymentStatus": "Paid",
+			"shouldBePaidBeforeDate": "2026-07-10T00:00:00.000Z",
+			"isOutOfStore": false,
+			"createdAt": "2026-06-19T14:00:00.000Z",
+			"comment": "Fully paid via Wire Transfer."
+		},
+		{
+			"_id": "3",
+			"storeId": "s",
+			"customerId": "8",
+			"products": [
+				{ "productId": "8", "amount": 100, "unitPrice": 1500, "unitBuyingPrice": 405 }
+			],
+			"totalPrice": 150000,
+			"paidPrice": 0,
+			"paymentStatus": "Unpaid",
+			"shouldBePaidBeforeDate": "2026-05-15T00:00:00.000Z",
+			"isOutOfStore": true,
+			"createdAt": "2026-05-01T09:00:00.000Z",
+			"comment": "URGENT OVERDUE! Customer unresponsive."
+		}
+	],
+	"purchases": [
+		{
+			"_id": "1",
+			"storeId": "s",
+			"supplierId": "1",
+			"products": [
+				{ "productId": "1", "amount": 3000, "unitBuyingPrice": 10000 },
+				{ "productId": "3", "amount": 300, "unitBuyingPrice": 1000 }
+			],
+			"totalPrice": 300000,
+			"paidPrice": 200000,
+			"paymentStatus": "Partial",
+			"shouldBePaidBeforeDate": "2026-08-01T00:00:00.000Z",
+			"createdAt": "2026-06-15T10:00:00.000Z",
+			"comment": "Stock arrived somewhat late."
+		},
+		{
+			"_id": "2",
+			"storeId": "s",
+			"supplierId": "3",
+			"products": [
+				{ "productId": "4", "amount": 300, "unitBuyingPrice": 1000 }
+			],
+			"totalPrice": 30000,
+			"paidPrice": 30000,
+			"paymentStatus": "Paid",
+			"createdAt": "2026-06-10T10:00:00.000Z"
+		},
+		{
+			"_id": "3",
+			"storeId": "s",
+			"supplierId": "5",
+			"products": [
+				{ "productId": "2", "amount": 500, "unitBuyingPrice": 800 }
+			],
+			"totalPrice": 400000,
+			"paidPrice": 0,
+			"paymentStatus": "Unpaid",
+			"shouldBePaidBeforeDate": "2026-06-20T00:00:00.000Z",
+			"createdAt": "2026-06-01T11:00:00.000Z",
+			"comment": "Overdue payment to Anestesia."
+		}
+	]
+}
