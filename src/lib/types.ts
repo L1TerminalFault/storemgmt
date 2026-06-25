@@ -73,6 +73,7 @@ export type TransactionType = {
 	paymentStatus: PaymentStatus;
 	shouldBePaidBeforeDate?: string;
 	isOutOfStore: boolean;
+	createdAt?: string;
 	__more: string;
 };
 

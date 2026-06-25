@@ -163,9 +163,9 @@ export const Supplier =
   mongoose.models.Supplier || 
   mongoose.model("Supplier", supplierSchema);
 
-export const Notification = 
-  mongoose.models.Notification || 
-  mongoose.model("Notification", notificationSchema);
+// export const Notification = 
+//   mongoose.models.Notification || 
+//   mongoose.model("Notification", notificationSchema);
 
 export const Product = 
   mongoose.models.Product || 

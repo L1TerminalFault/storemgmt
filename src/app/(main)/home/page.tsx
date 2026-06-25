@@ -19,7 +19,7 @@ import {
 	FiCheckCircle,
 	FiRefreshCw,
 	FiX,
-    FiTrendingDown,
+	FiTrendingDown,
 	FiChevronDown,
 	FiAlertTriangle,
 } from "react-icons/fi";
@@ -41,7 +41,7 @@ type DashboardData = {
 	outOfStoreTransactions: TransactionType[];
 	lowStock: any[];
 	unapprovedItems: any[];
-    gradientOffset: number;
+	gradientOffset: number;
 };
 
 export default function HomeDashboard() {
@@ -82,7 +82,7 @@ export default function HomeDashboard() {
 			if (txs === undefined || custs === undefined || purs === undefined || store === undefined || prods === undefined || sups === undefined) {
 				const savedStoreId = localStorage.getItem("currentStoreId");
 				const qs = savedStoreId ? `?storeId=${savedStoreId}` : "";
-				
+
 				const [txRes, custRes, purRes, storeRes, prodRes, supRes] = await Promise.all([
 					fetch(`/api/transactions${qs}`),
 					fetch(`/api/customers`), // Customers usually global for admin, but can append qs if needed
@@ -104,7 +104,8 @@ export default function HomeDashboard() {
 						store = fetchedStores.find((s: any) => s._id === savedStoreId) || fetchedStores[0];
 					} else {
 						store = fetchedStores[0];
-						localStorage.setItem("currentStoreId", store._id);
+						if (store?._id) localStorage.setItem("currentStoreId", store?._id);
+						else store = null;
 					}
 				} else {
 					store = null;
@@ -133,7 +134,7 @@ export default function HomeDashboard() {
 			let totalCurrentProfit = 0;
 			let totalIdealProfit = 0;
 			let totalDebits = 0;
-            let totalSelfDebit = 0;
+			let totalSelfDebit = 0;
 			let totalSpentPurchases = 0;
 			let totalGainedTransactions = 0;
 			const debitTxs: any[] = [];
@@ -164,7 +165,7 @@ export default function HomeDashboard() {
 				const dateStr = new Date(tx.createdAt).toLocaleDateString(undefined, {
 					month: 'short', day: 'numeric'
 				});
-				
+
 				if (!chartMap[dateStr]) {
 					chartMap[dateStr] = { date: dateStr, currentProfit: 0, idealProfit: 0 };
 				}
@@ -177,59 +178,59 @@ export default function HomeDashboard() {
 				(tx: TransactionType) => tx.isOutOfStore,
 			);
 
-            // Compute self debit from purchases
-			const supplierDebits = (purs || []).filter((p: any) => p.paymentStatus !== "Paid");
-            (purs || []).forEach((pur: any) => {
-                totalSpentPurchases += pur.totalPrice;
-            });
-            supplierDebits.forEach((pur: any) => {
-                totalSelfDebit += (pur.totalPrice - pur.paidPrice);
-            });
-			
-			const lowStock: any[] = [];
-			const unapprovedItems: any[] = [];
-			
-			if (store?.inventory) {
-				store.inventory.forEach((item: any) => {
-					const prodName = pMap[item.productId]?.name || "Unknown Product";
-					if (item.amount < 50) {
-						lowStock.push({ ...item, name: prodName });
-					}
-					if (!item.approved) {
-						unapprovedItems.push({ ...item, name: prodName });
-					}
+				// Compute self debit from purchases
+				const supplierDebits = (purs || []).filter((p: any) => p.paymentStatus !== "Paid");
+				(purs || []).forEach((pur: any) => {
+					totalSpentPurchases += pur.totalPrice;
 				});
-			}
+				supplierDebits.forEach((pur: any) => {
+					totalSelfDebit += (pur.totalPrice - pur.paidPrice);
+				});
 
-            // Calculate gradient offset for current profit (to color red below 0)
-            const currentProfits = chartDataArr.map(d => d.currentProfit);
-            const dataMax = Math.max(...currentProfits, 0);
-            const dataMin = Math.min(...currentProfits, 0);
-            let offset = 0;
-            if (dataMax <= 0) {
-                offset = 0; // all red
-            } else if (dataMin >= 0) {
-                offset = 1; // all green
-            } else {
-                offset = dataMax / (dataMax - dataMin);
-            }
+				const lowStock: any[] = [];
+				const unapprovedItems: any[] = [];
 
-			setDashboardData({
-				chartData: chartDataArr,
-				totalCurrentProfit,
-				totalIdealProfit,
-				totalDebits,
-                totalSelfDebit,
-				totalSpentPurchases,
-				totalGainedTransactions,
-				debitTransactions: debitTxs.sort((a,b) => new Date(a.shouldBePaidBeforeDate).getTime() - new Date(b.shouldBePaidBeforeDate).getTime()),
-				supplierDebits,
-				outOfStoreTransactions,
-				lowStock,
-				unapprovedItems,
-                gradientOffset: offset
-			});
-			setLoading(false);
+				if (store?.inventory) {
+					store.inventory.forEach((item: any) => {
+						const prodName = pMap[item.productId]?.name || "Unknown Product";
+						if (item.amount < 50) {
+							lowStock.push({ ...item, name: prodName });
+						}
+						if (!item.approved) {
+							unapprovedItems.push({ ...item, name: prodName });
+						}
+					});
+				}
+
+				// Calculate gradient offset for current profit (to color red below 0)
+				const currentProfits = chartDataArr.map(d => d.currentProfit);
+				const dataMax = Math.max(...currentProfits, 0);
+				const dataMin = Math.min(...currentProfits, 0);
+				let offset = 0;
+				if (dataMax <= 0) {
+					offset = 0; // all red
+				} else if (dataMin >= 0) {
+					offset = 1; // all green
+				} else {
+					offset = dataMax / (dataMax - dataMin);
+				}
+
+				setDashboardData({
+					chartData: chartDataArr,
+					totalCurrentProfit,
+					totalIdealProfit,
+					totalDebits,
+					totalSelfDebit,
+					totalSpentPurchases,
+					totalGainedTransactions,
+					debitTransactions: debitTxs.sort((a,b) => new Date(a.shouldBePaidBeforeDate).getTime() - new Date(b.shouldBePaidBeforeDate).getTime()),
+						supplierDebits,
+					outOfStoreTransactions,
+					lowStock,
+					unapprovedItems,
+					gradientOffset: offset
+				});
+				setLoading(false);
 		}
 
 		loadData();
@@ -238,8 +239,8 @@ export default function HomeDashboard() {
 	if (loading || !dashboardData) {
 		return (
 			<div className="w-full h-full flex flex-col items-center justify-center p-6 text-theme-text opacity-70">
-				<CgSpinner className="animate-spin text-4xl mb-4 text-theme-accent" />
-				<p className="animate-pulse">Loading Dashboard Metrics...</p>
+			<CgSpinner className="animate-spin text-4xl mb-4 text-theme-accent" />
+			<p className="animate-pulse">Loading Dashboard Metrics...</p>
 			</div>
 		);
 	}
@@ -249,7 +250,7 @@ export default function HomeDashboard() {
 		totalCurrentProfit, 
 		totalIdealProfit, 
 		totalDebits, 
-        totalSelfDebit,
+		totalSelfDebit,
 		totalSpentPurchases,
 		totalGainedTransactions,
 		debitTransactions,
@@ -257,7 +258,7 @@ export default function HomeDashboard() {
 		outOfStoreTransactions,
 		lowStock,
 		unapprovedItems,
-        gradientOffset
+		gradientOffset
 	} = dashboardData;
 
 	const notificationCount =
@@ -280,387 +281,388 @@ export default function HomeDashboard() {
 
 	return (
 		<div className="w-full h-full flex flex-col gap-6 p-6 px-4 md:px-8 overflow-y-auto mb-[100px] scrollbar-hidden">
-			
-			{/* Top Header */}
-			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-theme-border/50 pb-6 pt-2">
-				<div className="flex flex-col gap-1">
-					<h1 className="text-3xl font-extrabold tracking-tight">
-						Welcome back, <span className="text-theme-accent">{userName}</span>!
-					</h1>
-					<p className="text-theme-text/50">Here is what's happening today in <span className="font-bold text-theme-accent">{globalStore?.title || "your store"}</span>.</p>
-				</div>
-				<div className="flex items-center gap-3">
-                    {availableStores && availableStores.length > 1 && (
-                        <div className="relative">
-							<button
-								onClick={() => setShowStorePicker((v) => !v)}
-								className="flex items-center gap-2 px-4 py-2 bg-theme-card border border-theme-border rounded-full font-medium hover:bg-theme-background transition-all"
-							>
-								<FiRefreshCw />
-								{globalStore?.title || "Select Store"}
-								<FiChevronDown className={`transition-transform ${showStorePicker ? "rotate-180" : ""}`} />
-							</button>
-							<AnimatePresence>
-								{showStorePicker && (
-									<>
-										<div
-											className="fixed inset-0 z-40"
-											onClick={() => setShowStorePicker(false)}
-										/>
-										<motion.div
-											initial={{ opacity: 0, y: -8 }}
-											animate={{ opacity: 1, y: 0 }}
-											exit={{ opacity: 0, y: -8 }}
-											className="absolute right-0 top-full mt-2 z-50 min-w-[220px] bg-theme-card border border-theme-border/50 rounded-2xl shadow-xl overflow-hidden"
-										>
-											{availableStores.map((s) => (
-												<button
-													key={s._id}
-													onClick={() => handleSelectStore(s)}
-													className={`w-full text-left px-4 py-3 hover:bg-theme-accent/10 transition-colors ${
-														s._id === globalStore?._id
-															? "bg-theme-accent/20 text-theme-accent font-bold"
-															: "text-theme-text"
-													}`}
-												>
-													{s.title}
-												</button>
-											))}
-										</motion.div>
-									</>
-								)}
-							</AnimatePresence>
-                        </div>
-                    )}
-					<button 
-						onClick={() => setShowNotifications(true)}
-						className="relative p-3 bg-theme-card border border-theme-border rounded-full hover:bg-theme-background transition-all"
-					>
-						<FiBell className="text-xl" />
-						{notificationCount > 0 && (
-							<span className="absolute top-0 right-0 -mt-1 -mr-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-theme-background">
-								{notificationCount}
-							</span>
-						)}
-					</button>
-				</div>
-			</div>
 
-			{/* Summary Overview */}
-			<motion.div
-				initial={{ opacity: 0, y: 20 }}
-				animate={{ opacity: 1, y: 0 }}
-				className="w-full bg-theme-card p-8 rounded-3xl shadow-xl border border-theme-border/30"
+		{/* Top Header */}
+		<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-theme-border/50 pb-6 pt-2">
+		<div className="flex flex-col gap-1">
+		<h1 className="text-3xl font-extrabold tracking-tight">
+		Welcome back, <span className="text-theme-accent">{userName}</span>!
+		</h1>
+		<p className="text-theme-text/50">Here is what's happening today in <span className="font-bold text-theme-accent">{globalStore?.title || "your store"}</span>.</p>
+		</div>
+		<div className="flex items-center gap-3">
+		{availableStores && availableStores.length > 1 && (
+			<div className="relative">
+			<button
+			onClick={() => setShowStorePicker((v) => !v)}
+			className="flex items-center gap-2 px-4 py-2 bg-theme-card border border-theme-border rounded-full font-medium hover:bg-theme-background transition-all"
 			>
-				<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
-					<div className="flex flex-col gap-2">
-						<span className="font-bold tracking-widest text-xs uppercase text-theme-accent">Financial Overview</span>
-						<h2 className="text-2xl font-extrabold tracking-tight">Money In &amp; Out</h2>
-						<p className="text-theme-text/50 text-sm">Lifetime totals for this store</p>
-					</div>
-					<div className="flex flex-col sm:flex-row gap-8 sm:gap-16">
-						<div className="flex flex-col gap-1">
-							<span className="text-theme-text/50 text-xs uppercase tracking-wider font-semibold">Total Spent (Purchases)</span>
-							<span className="text-4xl lg:text-5xl font-extrabold text-orange-400 tracking-tighter">
-								${totalSpentPurchases.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-							</span>
-						</div>
-						<div className="hidden sm:block w-px bg-theme-border/50" />
-						<div className="flex flex-col gap-1">
-							<span className="text-theme-text/50 text-xs uppercase tracking-wider font-semibold">Total Gained (Transactions)</span>
-							<span className="text-4xl lg:text-5xl font-extrabold text-emerald-400 tracking-tighter">
-								${totalGainedTransactions.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-							</span>
-						</div>
-					</div>
-				</div>
-			</motion.div>
-
-			{/* Header Stat Cards */}
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
-				<motion.div 
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-lg border border-theme-border/30"
-				>
-					<div className="flex justify-between items-start mb-2">
-						<div className="flex flex-col gap-1">
-							<span className="font-bold tracking-widest text-xs uppercase text-emerald-400">Current Profit</span>
-							<span className="text-theme-text/40 text-[10px] uppercase">Based on actual paid</span>
-						</div>
-						<div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
-							<FiTrendingUp className="text-xl" />
-						</div>
-					</div>
-					<h2 className="text-3xl lg:text-4xl font-extrabold text-theme-text tracking-tighter mt-2">
-						${totalCurrentProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-					</h2>
-				</motion.div>
-
-				<motion.div 
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ delay: 0.1 }}
-					className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-lg border border-theme-border/30"
-				>
-					<div className="flex justify-between items-start mb-2">
-						<div className="flex flex-col gap-1">
-							<span className="font-bold tracking-widest text-xs uppercase text-sky-400">Ideal Profit</span>
-							<span className="text-theme-text/40 text-[10px] uppercase">Assuming full payment</span>
-						</div>
-						<div className="p-3 bg-sky-500/10 text-sky-400 rounded-xl">
-							<FiTrendingUp className="text-xl" />
-						</div>
-					</div>
-					<h2 className="text-3xl lg:text-4xl font-extrabold text-theme-text tracking-tighter mt-2">
-						${totalIdealProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-					</h2>
-				</motion.div>
-
-				<motion.div 
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ delay: 0.2 }}
-					className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-lg border border-theme-border/30"
-				>
-					<div className="flex justify-between items-start mb-2">
-						<div className="flex flex-col gap-1">
-							<span className="font-bold tracking-widest text-xs uppercase text-red-400">Cust. Debits</span>
-							<span className="text-theme-text/40 text-[10px] uppercase">Total outstanding</span>
-						</div>
-						<div className="p-3 bg-red-500/10 text-red-400 rounded-xl">
-							<FiDollarSign className="text-xl" />
-						</div>
-					</div>
-					<h2 className="text-3xl lg:text-4xl font-extrabold text-theme-text tracking-tighter mt-2">
-						${totalDebits.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-					</h2>
-				</motion.div>
-
-                <motion.div 
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ delay: 0.3 }}
-					className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-lg border border-theme-border/30"
-				>
-					<div className="flex justify-between items-start mb-2">
-						<div className="flex flex-col gap-1">
-							<span className="font-bold tracking-widest text-xs uppercase text-orange-400">Self Debits</span>
-							<span className="text-theme-text/40 text-[10px] uppercase">To Suppliers</span>
-						</div>
-						<div className="p-3 bg-orange-500/10 text-orange-400 rounded-xl">
-							<FiTrendingDown className="text-xl" />
-						</div>
-					</div>
-					<h2 className="text-3xl lg:text-4xl font-extrabold text-theme-text tracking-tighter mt-2">
-						${totalSelfDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-					</h2>
-				</motion.div>
-			</div>
-
-			{/* Main Chart Section */}
-			<motion.div 
-				initial={{ opacity: 0, scale: 0.98 }}
-				animate={{ opacity: 1, scale: 1 }}
-				transition={{ delay: 0.4 }}
-				className="w-full flex flex-col xl:flex-row gap-6 mt-4"
-			>
-                {/* Current Profit Chart (Changes to red if < 0) */}
-                <div className="flex-1 min-w-0 h-[350px] bg-theme-card p-6 rounded-3xl shadow-xl flex flex-col border border-theme-border/30">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                        <h3 className="text-lg font-bold tracking-wide">Current Profit</h3>
-                    </div>
-                    <div className="flex-1 w-full min-h-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset={gradientOffset} stopColor="#10b981" stopOpacity={0.8}/>
-                                        <stop offset={gradientOffset} stopColor="#ef4444" stopOpacity={0.8}/>
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--borderCol)" vertical={false} />
-                                <XAxis dataKey="date" stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} />
-                                <YAxis stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-                                <Tooltip 
-                                    contentStyle={{ backgroundColor: 'var(--cardBg)', borderRadius: '12px', border: '1px solid var(--borderCol)', backdropFilter: 'blur(10px)' }}
-                                    itemStyle={{ color: 'var(--fg)' }}
-                                />
-                                <Area type="monotone" dataKey="currentProfit" stroke="url(#splitColor)" strokeWidth={3} fillOpacity={0.3} fill="url(#splitColor)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* Ideal Profit Chart */}
-                <div className="flex-1 min-w-0 h-[350px] bg-theme-card p-6 rounded-3xl shadow-xl flex flex-col border border-theme-border/30">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-3 h-3 rounded-full bg-sky-500"></div>
-                        <h3 className="text-lg font-bold tracking-wide">Ideal Profit</h3>
-                    </div>
-                    <div className="flex-1 w-full min-h-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorIdeal" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.6}/>
-                                        <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--borderCol)" vertical={false} />
-                                <XAxis dataKey="date" stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} />
-                                <YAxis stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-                                <Tooltip 
-                                    contentStyle={{ backgroundColor: 'var(--cardBg)', borderRadius: '12px', border: '1px solid var(--borderCol)', backdropFilter: 'blur(10px)' }}
-                                    itemStyle={{ color: 'var(--fg)' }}
-                                />
-                                <Area type="monotone" dataKey="idealProfit" stroke="#0ea5e9" strokeWidth={3} fillOpacity={1} fill="url(#colorIdeal)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-			</motion.div>
-
-			{/* Notifications Modal */}
+			<FiRefreshCw />
+			{globalStore?.title || "Select Store"}
+			<FiChevronDown className={`transition-transform ${showStorePicker ? "rotate-180" : ""}`} />
+			</button>
 			<AnimatePresence>
-				{showNotifications && (
-					<div className="fixed inset-0 z-[100] flex items-center justify-end">
-						<motion.div
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-							onClick={() => setShowNotifications(false)}
-						/>
-						<motion.div
-							initial={{ x: "100%" }}
-							animate={{ x: 0 }}
-							exit={{ x: "100%" }}
-							transition={{ type: "spring", damping: 25, stiffness: 200 }}
-							className="bg-theme-background relative z-10 w-full max-w-md h-full shadow-2xl flex flex-col"
-						>
-							<div className="flex justify-between items-center bg-theme-background p-6 border-b border-theme-border/50 sticky top-0 z-20">
-								<h3 className="text-2xl font-black tracking-tight flex items-center gap-3">
-									<FiBell /> Notifications
-								</h3>
-								<button
-									onClick={() => setShowNotifications(false)}
-									className="p-2 bg-theme-card rounded-full text-theme-text/60 hover:text-theme-text hover:bg-theme-border"
-								>
-									<FiX />
-								</button>
-							</div>
-
-							<div className="flex flex-col p-6 gap-8 overflow-y-auto w-full h-full pb-20">
-								
-								{notificationCount === 0 && (
-									<div className="text-center font-bold text-theme-text/50 mt-10">
-										All caught up! No notifications.
-									</div>
-								)}
-
-								{/* Out of Store Transactions */}
-								{outOfStoreTransactions.length > 0 && (
-									<div className="flex flex-col gap-3">
-										<div className="flex items-center gap-2 border-b border-theme-border/50 pb-2 mb-2">
-											<FiAlertTriangle className="text-red-400 text-lg" />
-											<h4 className="font-bold uppercase tracking-wider text-sm flex-1">Out of Store Sales</h4>
-											<span className="bg-red-500/20 text-red-500 text-xs font-black px-2 py-0.5 rounded-full">{outOfStoreTransactions.length}</span>
-										</div>
-										{outOfStoreTransactions.map(tx => (
-											<div key={tx._id} className="bg-red-500/10 rounded-xl p-3 border-l-4 border-red-500 flex flex-col gap-1 text-sm">
-												<div className="flex justify-between">
-													<span className="font-bold truncate max-w-[200px]">{customerMap[tx.customerId]}</span>
-													<span className="font-bold text-red-400">${tx.totalPrice.toLocaleString()}</span>
-												</div>
-												<div className="text-theme-text/50 text-xs">
-													{new Date(tx.createdAt).toLocaleDateString()} &middot; Sold beyond inventory
-												</div>
-											</div>
-										))}
-									</div>
-								)}
-
-								{/* Debits from Customers */}
-								{debitTransactions.length > 0 && (
-									<div className="flex flex-col gap-3">
-										<div className="flex items-center gap-2 border-b border-theme-border/50 pb-2 mb-2">
-											<FiDollarSign className="text-red-400 text-lg" />
-											<h4 className="font-bold uppercase tracking-wider text-sm flex-1">Customer Debits</h4>
-											<span className="bg-red-500/20 text-red-500 text-xs font-black px-2 py-0.5 rounded-full">{debitTransactions.length}</span>
-										</div>
-										{debitTransactions.map(tx => (
-											<div key={tx._id} className="bg-theme-card rounded-xl p-3 border-l-4 border-red-500 flex flex-col gap-1 text-sm">
-												<div className="flex justify-between">
-													<span className="font-bold truncate max-w-[200px]">{customerMap[tx.customerId]}</span>
-													<span className="font-bold text-red-400">${tx.debit.toLocaleString()}</span>
-												</div>
-												<div className="text-theme-text/50 text-xs">Due: {tx.shouldBePaidBeforeDate ? new Date(tx.shouldBePaidBeforeDate).toLocaleDateString() : 'N/A'}</div>
-											</div>
-										))}
-									</div>
-								)}
-
-								{/* Debits to Suppliers */}
-								{supplierDebits.length > 0 && (
-									<div className="flex flex-col gap-3">
-										<div className="flex items-center gap-2 border-b border-theme-border/50 pb-2 mb-2">
-											<FiAlertCircle className="text-orange-400 text-lg" />
-											<h4 className="font-bold uppercase tracking-wider text-sm flex-1">Supplier Payables</h4>
-											<span className="bg-orange-500/20 text-orange-500 text-xs font-black px-2 py-0.5 rounded-full">{supplierDebits.length}</span>
-										</div>
-										{supplierDebits.map(pur => (
-											<div key={pur._id} className="bg-theme-card rounded-xl p-3 border-l-4 border-orange-500 flex flex-col gap-1 text-sm">
-												<div className="flex justify-between">
-													<span className="font-bold truncate max-w-[200px]">{supplierMap[pur.supplierId]}</span>
-													<span className="font-bold text-orange-400">${(pur.totalPrice - pur.paidPrice).toLocaleString()}</span>
-												</div>
-												<div className="text-theme-text/50 text-xs">Due: {pur.shouldBePaidBeforeDate ? new Date(pur.shouldBePaidBeforeDate).toLocaleDateString() : 'N/A'}</div>
-											</div>
-										))}
-									</div>
-								)}
-
-								{/* Low Stock */}
-								{lowStock.length > 0 && (
-									<div className="flex flex-col gap-3">
-										<div className="flex items-center gap-2 border-b border-theme-border/50 pb-2 mb-2">
-											<FiPackage className="text-yellow-400 text-lg" />
-											<h4 className="font-bold uppercase tracking-wider text-sm flex-1">Low Stock Warning</h4>
-											<span className="bg-yellow-500/20 text-yellow-500 text-xs font-black px-2 py-0.5 rounded-full">{lowStock.length}</span>
-										</div>
-										{lowStock.map(item => (
-											<div key={item.productId} className="bg-theme-card rounded-xl p-3 border-l-4 border-yellow-500 flex justify-between items-center text-sm">
-												<span className="font-bold truncate">{item.name}</span>
-												<span className="font-mono bg-theme-background px-2 py-1 rounded text-xs">{item.amount} units</span>
-											</div>
-										))}
-									</div>
-								)}
-
-								{/* Unapproved Items */}
-								{unapprovedItems.length > 0 && (
-									<div className="flex flex-col gap-3">
-										<div className="flex items-center gap-2 border-b border-theme-border/50 pb-2 mb-2">
-											<FiCheckCircle className="text-sky-400 text-lg" />
-											<h4 className="font-bold uppercase tracking-wider text-sm flex-1">Pending Approvals</h4>
-											<span className="bg-sky-500/20 text-sky-500 text-xs font-black px-2 py-0.5 rounded-full">{unapprovedItems.length}</span>
-										</div>
-										{unapprovedItems.map(item => (
-											<div key={item.productId} className="bg-theme-card rounded-xl p-3 border-l-4 border-sky-500 flex justify-between items-center text-sm">
-												<span className="font-bold truncate">{item.name}</span>
-												<span className="text-sky-400 italic text-xs">Awaiting Approval in Store</span>
-											</div>
-										))}
-									</div>
-								)}
-
-							</div>
-						</motion.div>
-					</div>
-				)}
+			{showStorePicker && (
+				<>
+				<div
+				className="fixed inset-0 z-40"
+				onClick={() => setShowStorePicker(false)}
+				/>
+				<motion.div
+				initial={{ opacity: 0, y: -8 }}
+				animate={{ opacity: 1, y: 0 }}
+				exit={{ opacity: 0, y: -8 }}
+				className="absolute right-0 top-full mt-2 z-50 min-w-[220px] bg-theme-card border border-theme-border/50 rounded-2xl shadow-xl overflow-hidden"
+				>
+				{availableStores.map((s) => (
+					<button
+					key={s._id}
+					onClick={() => handleSelectStore(s)}
+					className={`w-full text-left px-4 py-3 hover:bg-theme-accent/10 transition-colors ${
+						s._id === globalStore?._id
+							? "bg-theme-accent/20 text-theme-accent font-bold"
+							: "text-theme-text"
+					}`}
+					>
+					{s.title}
+					</button>
+				))}
+				</motion.div>
+				</>
+			)}
 			</AnimatePresence>
+			</div>
+		)}
+		<button 
+		onClick={() => setShowNotifications(true)}
+		className="relative p-3 bg-theme-card border border-theme-border rounded-full hover:bg-theme-background transition-all"
+		>
+		<FiBell className="text-xl" />
+		{notificationCount > 0 && (
+			<span className="absolute top-0 right-0 -mt-1 -mr-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-theme-background">
+			{notificationCount}
+			</span>
+		)}
+		</button>
+		</div>
+		</div>
+
+		{/* Summary Overview */}
+		<motion.div
+		initial={{ opacity: 0, y: 20 }}
+		animate={{ opacity: 1, y: 0 }}
+		className="w-full bg-theme-card p-8 rounded-3xl shadow-xl border border-theme-border/30"
+		>
+		<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+		<div className="flex flex-col gap-2">
+		<span className="font-bold tracking-widest text-xs uppercase text-theme-accent">Financial Overview</span>
+		<h2 className="text-2xl font-extrabold tracking-tight">Money In &amp; Out</h2>
+		<p className="text-theme-text/50 text-sm">Lifetime totals for this store</p>
+			</div>
+		<div className="flex flex-col sm:flex-row gap-8 sm:gap-16">
+		<div className="flex flex-col gap-1">
+		<span className="text-theme-text/50 text-xs uppercase tracking-wider font-semibold">Total Spent (Purchases)</span>
+		<span className="text-4xl lg:text-5xl font-extrabold text-orange-400 tracking-tighter">
+		${totalSpentPurchases.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+		</span>
+		</div>
+		<div className="hidden sm:block w-px bg-theme-border/50" />
+		<div className="flex flex-col gap-1">
+		<span className="text-theme-text/50 text-xs uppercase tracking-wider font-semibold">Total Gained (Transactions)</span>
+		<span className="text-4xl lg:text-5xl font-extrabold text-emerald-400 tracking-tighter">
+		${totalGainedTransactions.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+		</span>
+		</div>
+		</div>
+		</div>
+		</motion.div>
+
+		{/* Header Stat Cards */}
+		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+		<motion.div 
+		initial={{ opacity: 0, y: 20 }}
+		animate={{ opacity: 1, y: 0 }}
+		className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-lg border border-theme-border/30"
+		>
+		<div className="flex justify-between items-start mb-2">
+		<div className="flex flex-col gap-1">
+		<span className="font-bold tracking-widest text-xs uppercase text-emerald-400">Current Profit</span>
+		<span className="text-theme-text/40 text-[10px] uppercase">Based on actual paid</span>
+		</div>
+		<div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
+		<FiTrendingUp className="text-xl" />
+		</div>
+		</div>
+		<h2 className="text-3xl lg:text-4xl font-extrabold text-theme-text tracking-tighter mt-2">
+		${totalCurrentProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+		</h2>
+		</motion.div>
+
+		<motion.div 
+		initial={{ opacity: 0, y: 20 }}
+		animate={{ opacity: 1, y: 0 }}
+		transition={{ delay: 0.1 }}
+		className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-lg border border-theme-border/30"
+		>
+		<div className="flex justify-between items-start mb-2">
+		<div className="flex flex-col gap-1">
+		<span className="font-bold tracking-widest text-xs uppercase text-sky-400">Ideal Profit</span>
+		<span className="text-theme-text/40 text-[10px] uppercase">Assuming full payment</span>
+		</div>
+		<div className="p-3 bg-sky-500/10 text-sky-400 rounded-xl">
+		<FiTrendingUp className="text-xl" />
+		</div>
+		</div>
+		<h2 className="text-3xl lg:text-4xl font-extrabold text-theme-text tracking-tighter mt-2">
+		${totalIdealProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+		</h2>
+		</motion.div>
+
+		<motion.div 
+		initial={{ opacity: 0, y: 20 }}
+		animate={{ opacity: 1, y: 0 }}
+		transition={{ delay: 0.2 }}
+		className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-lg border border-theme-border/30"
+		>
+		<div className="flex justify-between items-start mb-2">
+		<div className="flex flex-col gap-1">
+		<span className="font-bold tracking-widest text-xs uppercase text-red-400">Cust. Debits</span>
+		<span className="text-theme-text/40 text-[10px] uppercase">Total outstanding</span>
+		</div>
+		<div className="p-3 bg-red-500/10 text-red-400 rounded-xl">
+		<FiDollarSign className="text-xl" />
+		</div>
+		</div>
+		<h2 className="text-3xl lg:text-4xl font-extrabold text-theme-text tracking-tighter mt-2">
+		${totalDebits.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+		</h2>
+		</motion.div>
+
+		<motion.div 
+		initial={{ opacity: 0, y: 20 }}
+		animate={{ opacity: 1, y: 0 }}
+		transition={{ delay: 0.3 }}
+		className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-lg border border-theme-border/30"
+		>
+		<div className="flex justify-between items-start mb-2">
+		<div className="flex flex-col gap-1">
+		<span className="font-bold tracking-widest text-xs uppercase text-orange-400">Self Debits</span>
+		<span className="text-theme-text/40 text-[10px] uppercase">To Suppliers</span>
+		</div>
+		<div className="p-3 bg-orange-500/10 text-orange-400 rounded-xl">
+		<FiTrendingDown className="text-xl" />
+		</div>
+		</div>
+		<h2 className="text-3xl lg:text-4xl font-extrabold text-theme-text tracking-tighter mt-2">
+		${totalSelfDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+		</h2>
+		</motion.div>
+		</div>
+
+		{/* Main Chart Section */}
+		<motion.div 
+		initial={{ opacity: 0, scale: 0.98 }}
+		animate={{ opacity: 1, scale: 1 }}
+		transition={{ delay: 0.4 }}
+		className="w-full flex flex-col xl:flex-row gap-6 mt-4"
+		>
+		{/* Current Profit Chart (Changes to red if < 0) */}
+		<div className="flex-1 min-w-0 h-[350px] bg-theme-card p-6 rounded-3xl shadow-xl flex flex-col border border-theme-border/30">
+		<div className="flex items-center gap-3 mb-6">
+		<div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+		<h3 className="text-lg font-bold tracking-wide">Current Profit</h3>
+		</div>
+		<div className="flex-1 w-full min-h-0">
+		<ResponsiveContainer width="100%" height="100%">
+		<AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+		<defs>
+		<linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
+		<stop offset={gradientOffset} stopColor="#10b981" stopOpacity={0.8}/>
+		<stop offset={gradientOffset} stopColor="#ef4444" stopOpacity={0.8}/>
+		</linearGradient>
+		</defs>
+		<CartesianGrid strokeDasharray="3 3" stroke="var(--borderCol)" vertical={false} />
+		<XAxis dataKey="date" stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} />
+		<YAxis stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+		<Tooltip 
+		contentStyle={{ backgroundColor: 'var(--cardBg)', borderRadius: '12px', border: '1px solid var(--borderCol)', backdropFilter: 'blur(10px)' }}
+		itemStyle={{ color: 'var(--fg)' }}
+		/>
+		<Area type="monotone" dataKey="currentProfit" stroke="url(#splitColor)" strokeWidth={3} fillOpacity={0.3} fill="url(#splitColor)" />
+		</AreaChart>
+		</ResponsiveContainer>
+		</div>
+		</div>
+
+		{/* Ideal Profit Chart */}
+		<div className="flex-1 min-w-0 h-[350px] bg-theme-card p-6 rounded-3xl shadow-xl flex flex-col border border-theme-border/30">
+		<div className="flex items-center gap-3 mb-6">
+		<div className="w-3 h-3 rounded-full bg-sky-500"></div>
+		<h3 className="text-lg font-bold tracking-wide">Ideal Profit</h3>
+		</div>
+		<div className="flex-1 w-full min-h-0">
+		<ResponsiveContainer width="100%" height="100%">
+		<AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+		<defs>
+		<linearGradient id="colorIdeal" x1="0" y1="0" x2="0" y2="1">
+		<stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.6}/>
+		<stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
+		</linearGradient>
+		</defs>
+		<CartesianGrid strokeDasharray="3 3" stroke="var(--borderCol)" vertical={false} />
+		<XAxis dataKey="date" stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} />
+		<YAxis stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+		<Tooltip 
+		contentStyle={{ backgroundColor: 'var(--cardBg)', borderRadius: '12px', border: '1px solid var(--borderCol)', backdropFilter: 'blur(10px)' }}
+		itemStyle={{ color: 'var(--fg)' }}
+		/>
+		<Area type="monotone" dataKey="idealProfit" stroke="#0ea5e9" strokeWidth={3} fillOpacity={1} fill="url(#colorIdeal)" />
+		</AreaChart>
+		</ResponsiveContainer>
+		</div>
+		</div>
+		</motion.div>
+
+		{/* Notifications Modal */}
+		<AnimatePresence>
+		{showNotifications && (
+			<div className="fixed inset-0 z-[100] flex items-center justify-end">
+			<motion.div
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			exit={{ opacity: 0 }}
+			className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+			onClick={() => setShowNotifications(false)}
+			/>
+			<motion.div
+			initial={{ x: "100%" }}
+			animate={{ x: 0 }}
+			exit={{ x: "100%" }}
+			transition={{ type: "spring", damping: 25, stiffness: 200 }}
+			className="bg-theme-background relative z-10 w-full max-w-md h-full shadow-2xl flex flex-col"
+			>
+			<div className="flex justify-between items-center bg-theme-background p-6 border-b border-theme-border/50 sticky top-0 z-20">
+			<h3 className="text-2xl font-black tracking-tight flex items-center gap-3">
+			<FiBell /> Notifications
+			</h3>
+			<button
+			onClick={() => setShowNotifications(false)}
+			className="p-2 bg-theme-card rounded-full text-theme-text/60 hover:text-theme-text hover:bg-theme-border"
+			>
+			<FiX />
+			</button>
+			</div>
+
+			<div className="flex flex-col p-6 gap-8 overflow-y-auto w-full h-full pb-20">
+
+			{notificationCount === 0 && (
+				<div className="text-center font-bold text-theme-text/50 mt-10">
+				All caught up! No notifications.
+					</div>
+			)}
+
+			{/* Out of Store Transactions */}
+			{outOfStoreTransactions.length > 0 && (
+				<div className="flex flex-col gap-3">
+				<div className="flex items-center gap-2 border-b border-theme-border/50 pb-2 mb-2">
+				<FiAlertTriangle className="text-red-400 text-lg" />
+				<h4 className="font-bold uppercase tracking-wider text-sm flex-1">Out of Store Sales</h4>
+				<span className="bg-red-500/20 text-red-500 text-xs font-black px-2 py-0.5 rounded-full">{outOfStoreTransactions.length}</span>
+				</div>
+				{outOfStoreTransactions.map(tx => (
+					<div key={tx._id} className="bg-red-500/10 rounded-xl p-3 border-l-4 border-red-500 flex flex-col gap-1 text-sm">
+					<div className="flex justify-between">
+					<span className="font-bold truncate max-w-[200px]">{customerMap[tx.customerId]}</span>
+					<span className="font-bold text-red-400">${tx.totalPrice.toLocaleString()}</span>
+					</div>
+					<div className="text-theme-text/50 text-xs">
+					{/* FIX: touched here */}
+					{new Date(tx.createdAt || "").toLocaleDateString()} &middot; Sold beyond inventory
+					</div>
+					</div>
+				))}
+				</div>
+			)}
+
+			{/* Debits from Customers */}
+			{debitTransactions.length > 0 && (
+				<div className="flex flex-col gap-3">
+				<div className="flex items-center gap-2 border-b border-theme-border/50 pb-2 mb-2">
+				<FiDollarSign className="text-red-400 text-lg" />
+				<h4 className="font-bold uppercase tracking-wider text-sm flex-1">Customer Debits</h4>
+				<span className="bg-red-500/20 text-red-500 text-xs font-black px-2 py-0.5 rounded-full">{debitTransactions.length}</span>
+				</div>
+				{debitTransactions.map(tx => (
+					<div key={tx._id} className="bg-theme-card rounded-xl p-3 border-l-4 border-red-500 flex flex-col gap-1 text-sm">
+					<div className="flex justify-between">
+					<span className="font-bold truncate max-w-[200px]">{customerMap[tx.customerId]}</span>
+					<span className="font-bold text-red-400">${tx.debit.toLocaleString()}</span>
+					</div>
+					<div className="text-theme-text/50 text-xs">Due: {tx.shouldBePaidBeforeDate ? new Date(tx.shouldBePaidBeforeDate).toLocaleDateString() : 'N/A'}</div>
+					</div>
+				))}
+				</div>
+			)}
+
+			{/* Debits to Suppliers */}
+			{supplierDebits.length > 0 && (
+				<div className="flex flex-col gap-3">
+				<div className="flex items-center gap-2 border-b border-theme-border/50 pb-2 mb-2">
+				<FiAlertCircle className="text-orange-400 text-lg" />
+				<h4 className="font-bold uppercase tracking-wider text-sm flex-1">Supplier Payables</h4>
+				<span className="bg-orange-500/20 text-orange-500 text-xs font-black px-2 py-0.5 rounded-full">{supplierDebits.length}</span>
+				</div>
+				{supplierDebits.map(pur => (
+					<div key={pur._id} className="bg-theme-card rounded-xl p-3 border-l-4 border-orange-500 flex flex-col gap-1 text-sm">
+					<div className="flex justify-between">
+					<span className="font-bold truncate max-w-[200px]">{supplierMap[pur.supplierId]}</span>
+					<span className="font-bold text-orange-400">${(pur.totalPrice - pur.paidPrice).toLocaleString()}</span>
+					</div>
+					<div className="text-theme-text/50 text-xs">Due: {pur.shouldBePaidBeforeDate ? new Date(pur.shouldBePaidBeforeDate).toLocaleDateString() : 'N/A'}</div>
+					</div>
+				))}
+				</div>
+			)}
+
+			{/* Low Stock */}
+			{lowStock.length > 0 && (
+				<div className="flex flex-col gap-3">
+				<div className="flex items-center gap-2 border-b border-theme-border/50 pb-2 mb-2">
+				<FiPackage className="text-yellow-400 text-lg" />
+				<h4 className="font-bold uppercase tracking-wider text-sm flex-1">Low Stock Warning</h4>
+				<span className="bg-yellow-500/20 text-yellow-500 text-xs font-black px-2 py-0.5 rounded-full">{lowStock.length}</span>
+				</div>
+				{lowStock.map(item => (
+					<div key={item.productId} className="bg-theme-card rounded-xl p-3 border-l-4 border-yellow-500 flex justify-between items-center text-sm">
+					<span className="font-bold truncate">{item.name}</span>
+					<span className="font-mono bg-theme-background px-2 py-1 rounded text-xs">{item.amount} units</span>
+					</div>
+				))}
+				</div>
+			)}
+
+			{/* Unapproved Items */}
+			{unapprovedItems.length > 0 && (
+				<div className="flex flex-col gap-3">
+				<div className="flex items-center gap-2 border-b border-theme-border/50 pb-2 mb-2">
+				<FiCheckCircle className="text-sky-400 text-lg" />
+				<h4 className="font-bold uppercase tracking-wider text-sm flex-1">Pending Approvals</h4>
+				<span className="bg-sky-500/20 text-sky-500 text-xs font-black px-2 py-0.5 rounded-full">{unapprovedItems.length}</span>
+				</div>
+				{unapprovedItems.map(item => (
+					<div key={item.productId} className="bg-theme-card rounded-xl p-3 border-l-4 border-sky-500 flex justify-between items-center text-sm">
+					<span className="font-bold truncate">{item.name}</span>
+					<span className="text-sky-400 italic text-xs">Awaiting Approval in Store</span>
+					</div>
+				))}
+				</div>
+			)}
+
+			</div>
+			</motion.div>
+			</div>
+		)}
+		</AnimatePresence>
 
 		</div>
 	);

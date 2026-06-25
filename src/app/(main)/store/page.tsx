@@ -103,7 +103,8 @@ export default function StorePage() {
 			setPurchasesList(purData || []);
 			setSuppliersList(supData || []);
 
-			if (supData && supData.length > 0) setSelectedSupplier(supData[0]._id);
+			// FIX: touched here
+			if (supData && supData.length > 0) setSelectedSupplier(supData[0]._id || "");
 
 			setLoading(false);
 		}
