@@ -5,15 +5,15 @@ import * as dev from "../../../lib/devData";
 const isDev = process.env.NODE_ENV === "development";
 
 export async function GET(req: Request) {
-	const adminData = await getEffectiveAdminId();
-	if (!adminData) return NextResponse.json([]);
-
 	const { searchParams } = new URL(req.url);
 	const storeId = searchParams.get("storeId");
 
 	if (isDev) {
-		return NextResponse.json(dev.getAll("transactions"));
+		const transactions = dev.getAll("transactions");
+		return NextResponse.json(storeId ? transactions.filter((tx: any) => tx.storeId === storeId) : transactions);
 	}
+	const adminData = await getEffectiveAdminId();
+	if (!adminData) return NextResponse.json([]);
 	const { dbConnect, Transaction } = await import("../../../db/model");
 	await dbConnect();
 	try {
@@ -29,14 +29,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-	const adminData = await getEffectiveAdminId();
-	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const body = await req.json();
-	body.clerkId = adminData.clerkId;
-
-	const { applyTransactionToInventory } = await import("../../../lib/transaction-util");
-
 	if (isDev) {
+		body.clerkId = "dev-user";
+		const { applyTransactionToInventory } = await import("../../../lib/transaction-util");
 		const store = dev.getById("stores", body.storeId);
 		if (store) {
 			const { isOutOfStore, inventory } = applyTransactionToInventory(
@@ -50,6 +46,12 @@ export async function POST(req: Request) {
 		}
 		return NextResponse.json(dev.create("transactions", body), { status: 201 });
 	}
+	const adminData = await getEffectiveAdminId();
+	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	body.clerkId = adminData.clerkId;
+	if (adminData.storeId) body.storeId = adminData.storeId;
+
+	const { applyTransactionToInventory } = await import("../../../lib/transaction-util");
 
 	const { dbConnect, Transaction, Store } = await import("../../../db/model");
 	await dbConnect();
@@ -75,8 +77,6 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
-	const adminData = await getEffectiveAdminId();
-	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const body = await req.json();
 	const { _id, ...updates } = body;
 	if (!_id) return NextResponse.json({ error: "Missing _id" }, { status: 400 });
@@ -85,6 +85,9 @@ export async function PUT(req: Request) {
 		if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
 		return NextResponse.json(updated);
 	}
+	const adminData = await getEffectiveAdminId();
+	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (adminData.role !== "Admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	const { dbConnect, Transaction } = await import("../../../db/model");
 	await dbConnect();
 	try {
@@ -97,8 +100,6 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-	const adminData = await getEffectiveAdminId();
-	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const { searchParams } = new URL(req.url);
 	const id = searchParams.get("id");
 	if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
@@ -107,6 +108,9 @@ export async function DELETE(req: Request) {
 		if (!removed) return NextResponse.json({ error: "Not found" }, { status: 404 });
 		return NextResponse.json({ success: true });
 	}
+	const adminData = await getEffectiveAdminId();
+	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (adminData.role !== "Admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	const { dbConnect, Transaction } = await import("../../../db/model");
 	await dbConnect();
 	try {

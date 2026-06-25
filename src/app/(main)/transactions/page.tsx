@@ -6,6 +6,8 @@ import { FiFileText, FiAlertTriangle } from "react-icons/fi";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useStoreStore } from "@/lib/store";
+import { parseApiArray } from "@/lib/api-util";
+import EmptyState from "@/components/EmptyState";
 
 type Tab = "all" | "outOfStore";
 
@@ -32,8 +34,8 @@ export default function TransactionsPage() {
 					fetch(`/api/transactions${qs}`),
 					fetch("/api/customers"),
 				]);
-				fetchedTransactions = await txRes.json();
-				fetchedCustomers = await custRes.json();
+				fetchedTransactions = await parseApiArray(txRes);
+				fetchedCustomers = await parseApiArray(custRes);
 
 				setTransactions(fetchedTransactions || []);
 				setCustomers(fetchedCustomers || []);
@@ -102,6 +104,11 @@ export default function TransactionsPage() {
 					<CgSpinner className="animate-spin text-4xl text-theme-accent" />
 					<p className="animate-pulse">Loading Transactions...</p>
 				</div>
+			) : !data.length ? (
+				<EmptyState
+					title="No transactions yet"
+					message="Complete a sale on the Customers page to see transactions here."
+				/>
 			) : !displayed.length ? (
 				<div className="w-full p-8 text-center border border-dashed border-theme-border rounded-xl text-theme-text/50">
 					{activeTab === "outOfStore"

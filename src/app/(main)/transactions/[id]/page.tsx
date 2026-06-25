@@ -8,6 +8,7 @@ import { FaTableList as Table } from "react-icons/fa6";
 import { TbLayoutList as UI } from "react-icons/tb";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { parseApiArray } from "@/lib/api-util";
 
 export default function TransactionDetailPage() {
 	const params = useParams();
@@ -27,9 +28,9 @@ export default function TransactionDetailPage() {
 				fetch("/api/customers"),
 				fetch("/api/products"),
 			]);
-			const txData = await txRes.json();
-			const custData = await custRes.json();
-			const prodData = await prodRes.json();
+			const txData = await parseApiArray(txRes);
+			const custData = await parseApiArray(custRes);
+			const prodData = await parseApiArray(prodRes);
 
 			const cMap: Record<string, string> = {};
 			custData.forEach((c: any) => {
@@ -290,108 +291,128 @@ export default function TransactionDetailPage() {
 						transition={{ duration: 0.2 }}
 						className="bg-theme-card rounded-3xl p-6 shadow-xl backdrop-blur-xl border border-theme-border/50 overflow-hidden flex flex-col gap-6"
 					>
-						{/* Table mode now acts as a complete overview ticket */}
-						<div className="flex items-center justify-between border-b border-theme-border/50 pb-4">
-							<h3 className="text-2xl font-black">Invoice / Summary</h3>
-							<div className="text-right">
-								<div className="text-sm text-theme-text/50 font-mono">{new Date(transaction.createdAt).toLocaleDateString()}</div>
-								<div className="font-mono text-xs text-theme-text/30">ID: {transaction._id}</div>
+						<div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-theme-border/50 pb-4">
+							<div>
+								<h3 className="text-2xl font-black">Invoice Summary</h3>
+								<p className="text-sm text-theme-text/40 font-mono mt-1">
+									ID: {transaction._id}
+								</p>
+							</div>
+							<div className="text-left sm:text-right">
+								<div className="text-xs uppercase tracking-widest text-theme-text/50 font-bold">
+									Date
+								</div>
+								<div className="text-sm font-mono">
+									{new Date(transaction.createdAt).toLocaleDateString()}
+								</div>
 							</div>
 						</div>
 
-						<div className="grid grid-cols-2 gap-4">
-							<div className="flex flex-col gap-1">
-								<span className="text-xs text-theme-text/50 uppercase tracking-widest">Bill To</span>
-								<span className="font-bold text-lg">{customerName}</span>
+						<div className="flex flex-col gap-5">
+							<div className="w-full overflow-x-auto">
+								<table className="w-full text-left border-collapse min-w-[420px]">
+									<tbody className="text-sm">
+										<tr className="border-b border-theme-border/50">
+											<th className="p-3 w-40 text-theme-text/50 uppercase tracking-widest text-xs">
+												Customer
+											</th>
+											<td className="p-3 font-bold">{customerName}</td>
+										</tr>
+										<tr className="border-b border-theme-border/50">
+											<th className="p-3 text-theme-text/50 uppercase tracking-widest text-xs">
+												Status
+											</th>
+											<td className="p-3 font-bold">{transaction.paymentStatus}</td>
+										</tr>
+										{transaction.shouldBePaidBeforeDate && (
+											<tr className="border-b border-theme-border/50">
+												<th className="p-3 text-theme-text/50 uppercase tracking-widest text-xs">
+													Due Date
+												</th>
+												<td className="p-3 font-bold">
+													{new Date(transaction.shouldBePaidBeforeDate).toLocaleDateString()}
+												</td>
+											</tr>
+										)}
+										{transaction.comment && (
+											<tr>
+												<th className="p-3 text-theme-text/50 uppercase tracking-widest text-xs">
+													Notes
+												</th>
+												<td className="p-3 text-theme-text/80">{transaction.comment}</td>
+											</tr>
+										)}
+									</tbody>
+								</table>
 							</div>
-							<div className="flex flex-col gap-1 items-end">
-								<span className="text-xs text-theme-text/50 uppercase tracking-widest">Status / Action</span>
-								{transaction.paymentStatus !== "Paid" ? (
-									<button
-										onClick={handleSetPaid}
-										disabled={settingPaid}
-										className="flex items-center gap-2 px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg text-sm font-bold transition-all disabled:opacity-50 mt-1"
-									>
-										{settingPaid ? <CgSpinner className="animate-spin" /> : <FiCheckCircle/>} Set as Paid
-									</button>
-								) : (
-									<span className="font-bold text-lg text-emerald-400 mt-1">{transaction.paymentStatus}</span>
-								)}
+
+							<div className="w-full overflow-x-auto">
+								<table className="w-full text-left border-collapse min-w-[420px]">
+									<tbody className="text-sm">
+										<tr className="border-b border-theme-border/50">
+											<th className="p-3 w-40 text-theme-text/50 uppercase tracking-widest text-xs">
+												Paid
+											</th>
+											<td className="p-3 text-right font-bold">
+												${transaction.paidPrice.toLocaleString()}
+											</td>
+										</tr>
+										<tr className="border-b border-theme-border/50">
+											<th className="p-3 text-theme-text/50 uppercase tracking-widest text-xs">
+												Total
+											</th>
+											<td className="p-3 text-right text-lg font-black">
+												${transaction.totalPrice.toLocaleString()}
+											</td>
+										</tr>
+										{transaction.totalPrice - transaction.paidPrice > 0 && (
+											<tr>
+												<th className="p-3 text-theme-text/50 uppercase tracking-widest text-xs">
+													Balance Due
+												</th>
+												<td className="p-3 text-right font-black text-red-400">
+													${(transaction.totalPrice - transaction.paidPrice).toLocaleString()}
+												</td>
+											</tr>
+										)}
+									</tbody>
+								</table>
 							</div>
 						</div>
-						
-						{transaction.comment && (
-							<div className="bg-theme-background/50 p-3 rounded-lg border border-theme-border border-dashed text-sm">
-								<span className="font-bold text-theme-text/70 uppercase text-xs block mb-1">Notes</span>
-								{transaction.comment}
-							</div>
-						)}
 
 						<div className="w-full overflow-x-auto mt-2">
-							<table className="w-full text-left border-collapse min-w-[600px]">
+							<table className="w-full text-left border-collapse min-w-[520px]">
 								<thead>
 									<tr className="text-theme-text/70 border-b-2 border-theme-border uppercase tracking-widest text-xs">
 										<th className="p-3">Product</th>
 										<th className="p-3 text-right">Qty</th>
-										<th className="p-3 text-right">Cost (Buy)</th>
-										<th className="p-3 text-right">Price (Sell)</th>
+										<th className="p-3 text-right">Unit Price</th>
 										<th className="p-3 text-right">Line Total</th>
-										<th className="p-3 text-right">Profit</th>
 									</tr>
 								</thead>
 								<tbody>
-									{transaction.products.map(
-										(p: any, idx: number) => {
-											const product = productsMap[p.productId];
-											const name =
-												product?.name ??
-												`Product #${p.productId}`;
-											return (
-												<tr
-													key={idx}
-													className={`${idx % 2 ? "" : "bg-theme-accent/5"} border-b border-theme-border/50 hover:bg-theme-accent/10 transition-colors font-mono text-sm`}
-												>
-													<td className="p-3 font-bold font-sans">
-														{name}
-													</td>
-													<td className="p-3 text-right">
-														{p.amount}
-													</td>
-													<td className="p-3 text-right text-theme-text/60">
-														${p.unitBuyingPrice.toLocaleString()}
-													</td>
-													<td className="p-3 text-right">
-														${p.unitPrice.toLocaleString()}
-													</td>
-													<td className="p-3 text-right font-bold">
-														${(p.unitPrice * p.amount).toLocaleString()}
-													</td>
-													<td className="p-3 text-right text-emerald-400">
-														${((p.unitPrice - p.unitBuyingPrice) * p.amount).toLocaleString()}
-													</td>
-												</tr>
-											);
-										},
-									)}
+									{transaction.products.map((p: any, idx: number) => {
+										const product = productsMap[p.productId];
+										const name = product?.name ?? `Product #${p.productId}`;
+
+										return (
+											<tr
+												key={idx}
+												className={`${idx % 2 ? "" : "bg-theme-accent/5"} border-b border-theme-border/50 font-mono text-sm`}
+											>
+												<td className="p-3 font-bold font-sans">{name}</td>
+												<td className="p-3 text-right">{p.amount}</td>
+												<td className="p-3 text-right">
+													${p.unitPrice.toLocaleString()}
+												</td>
+												<td className="p-3 text-right font-bold">
+													${(p.unitPrice * p.amount).toLocaleString()}
+												</td>
+											</tr>
+										);
+									})}
 								</tbody>
 							</table>
-						</div>
-
-						<div className="flex flex-col items-end gap-1 mt-4 pt-4 border-t-2 border-theme-border">
-							<div className="flex items-center justify-between w-64 text-sm text-theme-text/70">
-								<span>Subtotal (Paid)</span>
-								<span>${transaction.paidPrice.toLocaleString()}</span>
-							</div>
-							<div className="flex items-center justify-between w-64 font-black text-xl mt-2">
-								<span>TOTAL</span>
-								<span>${transaction.totalPrice.toLocaleString()}</span>
-							</div>
-							{transaction.totalPrice - transaction.paidPrice > 0 && (
-								<div className="flex items-center justify-between w-64 text-red-400 font-bold mt-1">
-									<span>Balance Due</span>
-									<span>${(transaction.totalPrice - transaction.paidPrice).toLocaleString()}</span>
-								</div>
-							)}
 						</div>
 					</motion.div>
 				)}

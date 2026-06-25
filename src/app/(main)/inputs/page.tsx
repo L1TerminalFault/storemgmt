@@ -7,6 +7,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CgSpinner } from "react-icons/cg";
 import { FiX } from "react-icons/fi";
 import { useStoreStore } from "@/lib/store";
+import { parseApiArray } from "@/lib/api-util";
+import EmptyState from "@/components/EmptyState";
+
+import type { ProductType, SupplierType } from "@/lib/types";
 
 type Tab = "products" | "suppliers" | "customers";
 
@@ -64,9 +68,9 @@ export default function InputsPage() {
 					fetch("/api/suppliers"),
 					fetch("/api/customers"),
 				]);
-				prodData = await prodRes.json();
-				supData = await supRes.json();
-				custData = await custRes.json();
+				prodData = await parseApiArray(prodRes);
+				supData = await parseApiArray(supRes);
+				custData = await parseApiArray(custRes);
 
 				setGlobalProducts(prodData || []);
 				setGlobalSuppliers(supData || []);
@@ -94,7 +98,7 @@ export default function InputsPage() {
 		});
 
 		const resRaw = await fetch("/api/products");
-		const allProds = await resRaw.json();
+		const allProds: ProductType[] = await parseApiArray(resRaw);
 		setProducts(allProds);
 		setGlobalProducts(allProds);
 
@@ -108,7 +112,7 @@ export default function InputsPage() {
 		await fetch(`/api/products?id=${id}`, { method: "DELETE" });
 
 		const resRaw = await fetch("/api/products");
-		const allProds = await resRaw.json();
+		const allProds: ProductType[] = await parseApiArray(resRaw);
 		setProducts(allProds);
 		setGlobalProducts(allProds);
 	};
@@ -122,7 +126,7 @@ export default function InputsPage() {
 		});
 
 		const resRaw = await fetch("/api/suppliers");
-		const allSups = await resRaw.json();
+		const allSups: SupplierType[] = await parseApiArray(resRaw);
 		setSuppliers(allSups);
 		setGlobalSuppliers(allSups);
 
@@ -134,7 +138,7 @@ export default function InputsPage() {
 		await fetch(`/api/suppliers?id=${id}`, { method: "DELETE" });
 
 		const resRaw = await fetch("/api/suppliers");
-		const allSups = await resRaw.json();
+		const allSups: SupplierType[] = await parseApiArray(resRaw);
 		setSuppliers(allSups);
 		setGlobalSuppliers(allSups);
 	};
@@ -199,7 +203,13 @@ export default function InputsPage() {
 						</button>
 					</div>
 
-					{products.map((p, idx) => (
+					{products.length === 0 ? (
+						<EmptyState
+							title="No products yet"
+							message="Add your first product to use in purchases and transactions."
+						/>
+					) : (
+					products.map((p, idx) => (
 						<motion.div
 							key={p._id}
 							initial={{ opacity: 0, y: 12 }}
@@ -235,7 +245,8 @@ export default function InputsPage() {
 								<FiTrash2 />
 							</button>
 						</motion.div>
-					))}
+					))
+					)}
 				</div>
 			)}
 
@@ -253,7 +264,13 @@ export default function InputsPage() {
 						</button>
 					</div>
 
-					{suppliers.map((s, idx) => (
+					{suppliers.length === 0 ? (
+						<EmptyState
+							title="No suppliers yet"
+							message="Add suppliers to log purchases and restock inventory."
+						/>
+					) : (
+					suppliers.map((s, idx) => (
 						<motion.div
 							key={s._id}
 							initial={{ opacity: 0, y: 12 }}
@@ -276,7 +293,8 @@ export default function InputsPage() {
 								<FiTrash2 />
 							</button>
 						</motion.div>
-					))}
+					))
+					)}
 				</div>
 			)}
 
@@ -288,7 +306,13 @@ export default function InputsPage() {
 						</span>
 					</div>
 
-					{customers.map((c, idx) => (
+					{customers.length === 0 ? (
+						<EmptyState
+							title="No customers yet"
+							message="Customers are added when you complete transactions on the Customers page."
+						/>
+					) : (
+					customers.map((c, idx) => (
 						<motion.div
 							key={c._id}
 							initial={{ opacity: 0, y: 12 }}
@@ -305,7 +329,8 @@ export default function InputsPage() {
 								</span>
 							</div>
 						</motion.div>
-					))}
+					))
+					)}
 				</div>
 			)}
 

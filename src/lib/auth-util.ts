@@ -27,6 +27,7 @@ export async function getEffectiveAdminId() {
 			clerkId: metadata?.adminClerkId || userId,
 			storeId: metadata?.storeId || null,
 			role: metadata?.role || (metadata?.adminClerkId && metadata.adminClerkId !== userId ? "Sales" : "Admin"),
+			firstName: user.firstName,
 		};
 	} catch {
 		return null;

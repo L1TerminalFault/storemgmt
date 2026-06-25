@@ -5,6 +5,11 @@ import { FiPlus, FiTrash2, FiUser, FiCheck, FiX, FiShoppingCart } from "react-ic
 import { motion, AnimatePresence } from "framer-motion";
 import { CgSpinner } from "react-icons/cg";
 import { useStoreStore } from "@/lib/store";
+import { parseApiArray } from "@/lib/api-util";
+import EmptyState from "@/components/EmptyState";
+import Link from "next/link";
+
+import type { StoreType, CustomerType } from "@/lib/types";
 
 export default function CustomersCheckout() {
 	const customers = useStoreStore((s) => s.customers);
@@ -31,6 +36,12 @@ export default function CustomersCheckout() {
 	// Product Popup State
 	const [showProductPopup, setShowProductPopup] = useState(false);
 
+	// Add form popups
+	const [showAddCustomer, setShowAddCustomer] = useState(false);
+
+	// Customer form fields
+	const [newCustomerName, setNewCustomerName] = useState("");
+
 	useEffect(() => {
 		async function loadData() {
 			let cData = customers;
@@ -43,9 +54,9 @@ export default function CustomersCheckout() {
 					fetch("/api/products"),
 					fetch("/api/stores"),
 				]);
-				cData = await cRes.json();
-				pData = await pRes.json();
-				const fetchedStores = await sRes.json();
+				cData = await parseApiArray(cRes);
+				pData = await parseApiArray(pRes);
+				const fetchedStores: StoreType[] = await parseApiArray(sRes);
 				sData = fetchedStores;
 
 				setCustomers(cData || []);
@@ -100,6 +111,23 @@ export default function CustomersCheckout() {
 		0,
 	);
 
+	const handleAddCustomer = async () => {
+		if (!newCustomerName.trim()) return;
+		await fetch("/api/customers", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name: newCustomerName }),
+		});
+
+		const resRaw = await fetch("/api/customers");
+		const allCus: CustomerType[] = await parseApiArray(resRaw);
+		setData({ ...data, customers: allCus, });
+		setCustomers(allCus);
+
+		setNewCustomerName("");
+		setShowAddCustomer(false);
+	};
+
 	const handleSubmit = async () => {
 		if (!cart.length || !expandedCustomerId) return;
 		setSaving(true);
@@ -125,7 +153,7 @@ export default function CustomersCheckout() {
 		});
 
 		const storeRes = await fetch("/api/stores");
-		const stores = await storeRes.json();
+		const stores: StoreType[] = await parseApiArray(storeRes);
 		const activeStore = stores.find((s: any) => s._id === data.stores[0]?._id) || stores[0];
 		if (activeStore) setStore(activeStore);
 
@@ -150,13 +178,41 @@ export default function CustomersCheckout() {
 				<h2 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
 					<FiUser className="text-theme-accent" /> Customers
 				</h2>
-				<p className="text-theme-text/50">
-					{data.customers.length} customers &mdash; Select to begin a transaction
-				</p>
+
+				<div className="flex items-center justify-between mb-2">
+					<p className="text-theme-text/50">
+						{data.customers.length} customers &mdash; Select to begin a transaction
+					</p>
+
+					<button
+						onClick={() => setShowAddCustomer(true)}
+						className="flex items-center gap-2 px-4 py-2 bg-theme-accent/20 text-theme-accent rounded-full font-medium hover:bg-theme-accent hover:text-white transition-all"
+					>
+						<FiPlus /> Add Customer
+					</button>
+				</div>
+
+
 			</div>
 
 			<div className="flex flex-col gap-3">
-				{data.customers.map((c: any, idx: number) => {
+				{!data.stores?.length ? (
+					<EmptyState
+						title="No store found"
+						message="Create a store from Home before processing customer transactions."
+						action={
+							<Link href="/home" className="px-5 py-2.5 bg-theme-accent text-theme-background rounded-full font-semibold hover:opacity-90">
+								Go to Home
+							</Link>
+						}
+					/>
+				) : data.customers.length === 0 ? (
+					<EmptyState
+						title="No customers yet"
+						message="Customers will appear here once added to your account."
+					/>
+				) : (
+				data.customers.map((c: any, idx: number) => {
 					const isExpanded = expandedCustomerId === c._id;
 
 					return (
@@ -379,7 +435,8 @@ export default function CustomersCheckout() {
 							</AnimatePresence>
 						</motion.div>
 					);
-				})}
+				})
+				)}
 			</div>
 
 			{/* Product Popup Modal */}
@@ -412,7 +469,13 @@ export default function CustomersCheckout() {
 							</div>
 
 							<div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto scrollbar-hidden">
-								{data.products.map((p: any) => (
+								{data.products.length === 0 ? (
+									<EmptyState
+										title="No products available"
+										message="Add products in Inputs before creating a transaction."
+									/>
+								) : (
+								data.products.map((p: any) => (
 									<div
 										key={p._id}
 										onClick={() => handleSelectProduct(p)}
@@ -428,8 +491,61 @@ export default function CustomersCheckout() {
 										</div>
 										<FiPlus className="text-xl text-theme-accent" />
 									</div>
-								))}
+								))
+								)}
 							</div>
+						</motion.div>
+					</div>
+				)}
+			</AnimatePresence>
+
+			
+			{/* Add Customer Modal */}
+			<AnimatePresence>
+				{showAddCustomer && (
+					<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+							onClick={() => setShowAddCustomer(false)}
+						/>
+						<motion.div
+							initial={{ opacity: 0, scale: 0.9, y: 20 }}
+							animate={{ opacity: 1, scale: 1, y: 0 }}
+							exit={{ opacity: 0, scale: 0.9, y: 20 }}
+							className="bg-theme-background relative z-10 w-full max-w-md rounded-3xl p-6 shadow-2xl flex flex-col gap-5"
+						>
+							<div className="flex justify-between items-center">
+								<h3 className="text-2xl font-bold tracking-tight">
+									Add Customer
+								</h3>
+								<button
+									onClick={() => setShowAddCustomer(false)}
+									className="p-2 bg-theme-card rounded-full text-theme-text/60 hover:text-theme-text hover:bg-theme-border"
+								>
+									<FiX />
+								</button>
+							</div>
+							<div className="flex flex-col gap-2">
+								<label className="text-sm font-semibold text-theme-text/70 uppercase">
+									Customer Name
+								</label>
+								<input
+									type="text"
+									value={newCustomerName}
+									onChange={(e) => setNewCustomerName(e.target.value)}
+									placeholder="Customer name..."
+									className="p-3 rounded-xl bg-theme-card outline-none text-theme-text"
+								/>
+							</div>
+							<button
+								onClick={handleAddCustomer}
+								className="w-full p-4 bg-theme-text text-theme-background rounded-xl font-black text-lg hover:opacity-90 transition-opacity hover:scale-[1.03] active:scale-95 duration-300"
+							>
+								Add Customer
+							</button>
 						</motion.div>
 					</div>
 				)}

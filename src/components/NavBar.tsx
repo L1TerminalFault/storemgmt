@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, SVGProps, ReactNode } from "react";
+import { SVGProps, ReactNode } from "react";
 import {
 	FiHome,
 	FiShoppingBag,
@@ -10,9 +10,7 @@ import {
 	FiSettings,
 	FiUser,
 } from "react-icons/fi";
-import { useUser } from "@clerk/nextjs";
-
-import { isAdmin } from "@/lib/utils";
+import { useStoreStore } from "@/lib/store";
 
 type Route = {
 	name: string;
@@ -23,32 +21,26 @@ type Route = {
 const routesAdmin: Route[] = [
 	{ name: "Home", href: "/home", icon: (p) => <FiHome {...p} /> },
 	{ name: "Store", href: "/store", icon: (p) => <FiShoppingBag {...p} /> },
-	{ name: "Staff", href: "/settings/staff", icon: (p) => <FiUsers {...p} /> },
 	{ name: "Transactions", href: "/transactions", icon: (p) => <FiFileText {...p} /> },
+	{ name: "Staff", href: "/staff", icon: (p) => <FiUsers {...p} /> },
 	{ name: "Settings", href: "/settings", icon: (p) => <FiSettings {...p} /> },
 ];
 
-const routesSales: Route[] = [
+const routesUser: Route[] = [
 	{ name: "Home", href: "/home", icon: (p) => <FiHome {...p} /> },
 	{ name: "Customers", href: "/customers", icon: (p) => <FiUser {...p} /> },
-	{ name: "Store", href: "/store", icon: (p) => <FiShoppingBag {...p} /> },
 	{ name: "Transactions", href: "/transactions", icon: (p) => <FiFileText {...p} /> },
+	{ name: "Store", href: "/store", icon: (p) => <FiShoppingBag {...p} /> },
 	{ name: "Settings", href: "/settings", icon: (p) => <FiSettings {...p} /> },
 ];
 
 export default function NavBar() {
 	const pathname = usePathname();
 	const router = useRouter();
-	const { user } = useUser();
-	const [routes, setRoutes] = useState(routesSales);
-
-	useEffect(() => {
-		setRoutes(isAdmin(user) ? routesAdmin : routesSales);
-	}, [user]);
+	const role = useStoreStore((s) => s.effectiveUser?.role);
+	const routes = role === "Admin" ? routesAdmin : routesUser;
 
 	const isActive = (href: string) => {
-		if (href === "/settings/staff") return pathname.startsWith("/settings/staff");
-		if (href === "/settings") return pathname === "/settings";
 		return pathname.startsWith(href);
 	};
 

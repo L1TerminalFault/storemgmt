@@ -5,15 +5,15 @@ import * as dev from "../../../lib/devData";
 const isDev = process.env.NODE_ENV === "development";
 
 export async function GET(req: Request) {
-	const adminData = await getEffectiveAdminId();
-	if (!adminData) return NextResponse.json([]);
-
 	const { searchParams } = new URL(req.url);
 	const storeId = searchParams.get("storeId");
 
 	if (isDev) {
-		return NextResponse.json(dev.getAll("purchases"));
+		const purchases = dev.getAll("purchases");
+		return NextResponse.json(storeId ? purchases.filter((pur: any) => pur.storeId === storeId) : purchases);
 	}
+	const adminData = await getEffectiveAdminId();
+	if (!adminData) return NextResponse.json([]);
 	const { dbConnect, Purchase } = await import("../../../db/model");
 	await dbConnect();
 	try {
@@ -29,11 +29,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-	const adminData = await getEffectiveAdminId();
-	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const body = await req.json();
-	body.clerkId = adminData.clerkId;
 	if (isDev) {
+		body.clerkId = "dev-user";
 		const store = dev.getById("stores", body.storeId);
 		if (store) {
 			const inventory = store.inventory || [];
@@ -49,6 +47,10 @@ export async function POST(req: Request) {
 		}
 		return NextResponse.json(dev.create("purchases", body), { status: 201 });
 	}
+	const adminData = await getEffectiveAdminId();
+	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (adminData.role !== "Admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+	body.clerkId = adminData.clerkId;
 	const { dbConnect, Purchase, Store } = await import("../../../db/model");
 	await dbConnect();
 	try {
@@ -72,8 +74,6 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
-	const adminData = await getEffectiveAdminId();
-	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const body = await req.json();
 	const { _id, ...updates } = body;
 	if (!_id) return NextResponse.json({ error: "Missing _id" }, { status: 400 });
@@ -82,6 +82,9 @@ export async function PUT(req: Request) {
 		if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
 		return NextResponse.json(updated);
 	}
+	const adminData = await getEffectiveAdminId();
+	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (adminData.role !== "Admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	const { dbConnect, Purchase } = await import("../../../db/model");
 	await dbConnect();
 	try {
@@ -94,8 +97,6 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-	const adminData = await getEffectiveAdminId();
-	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const { searchParams } = new URL(req.url);
 	const id = searchParams.get("id");
 	if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
@@ -104,6 +105,9 @@ export async function DELETE(req: Request) {
 		if (!removed) return NextResponse.json({ error: "Not found" }, { status: 404 });
 		return NextResponse.json({ success: true });
 	}
+	const adminData = await getEffectiveAdminId();
+	if (!adminData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (adminData.role !== "Admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	const { dbConnect, Purchase } = await import("../../../db/model");
 	await dbConnect();
 	try {

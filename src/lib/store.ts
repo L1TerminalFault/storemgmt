@@ -1,10 +1,20 @@
 import { create } from "zustand";
 import type { SupplierType, StoreType, TransactionType, /* NotificationType, */ PurchaseType, ProductType, CustomerType } from "./types";
 
+export type EffectiveUser = {
+	userId?: string;
+	clerkId?: string;
+	storeId?: string | null;
+	role: "Admin" | "Sales";
+	firstName?: string;
+};
+
 export const useStoreStore = create(
 	(
 		set,
 	): {
+		effectiveUser: EffectiveUser | null | undefined;
+		setEffectiveUser: (value: EffectiveUser | null | undefined) => void;
 		store: StoreType | null | undefined;
 		availableStores: StoreType[] | undefined;
 		setStore: (value: StoreType | null | undefined) => void;
@@ -26,6 +36,8 @@ export const useStoreStore = create(
 		// notifications: NotificationType[] | undefined;
 		// setNotifications: (value: NotificationType[] | undefined) => void;
 	} => ({
+		effectiveUser: undefined,
+		setEffectiveUser: (value: EffectiveUser | null | undefined) => set(() => ({ effectiveUser: value })),
 		store: undefined,
 		availableStores: undefined,
 		setStore: (value: StoreType | null | undefined) => set(() => ({ store: value })),

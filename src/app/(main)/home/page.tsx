@@ -22,11 +22,14 @@ import {
 	FiTrendingDown,
 	FiChevronDown,
 	FiAlertTriangle,
+	FiPlus,
 } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { CgSpinner } from "react-icons/cg";
 import { useStoreStore } from "@/lib/store";
-import type { TransactionType } from "@/lib/types";
+import type { TransactionType, StoreType } from "@/lib/types";
+import { parseApiArray } from "@/lib/api-util";
+import EmptyState from "@/components/EmptyState";
 
 type DashboardData = {
 	chartData: any[];
@@ -36,6 +39,13 @@ type DashboardData = {
 	totalSelfDebit: number;
 	totalSpentPurchases: number;
 	totalGainedTransactions: number;
+	storeMoneyTotals: {
+		storeId: string;
+		title: string;
+		moneyIn: number;
+		moneyOut: number;
+		isCurrent: boolean;
+	}[];
 	debitTransactions: any[];
 	supplierDebits: any[];
 	outOfStoreTransactions: TransactionType[];
@@ -60,6 +70,7 @@ export default function HomeDashboard() {
 	const setGlobalSuppliers = useStoreStore((s) => s.setSuppliers);
 	const availableStores = useStoreStore((s) => s.availableStores);
 	const setAvailableStores = useStoreStore((s) => s.setAvailableStores);
+	const effectiveUser = useStoreStore((s) => s.effectiveUser);
 
 	const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
 	const [customerMap, setCustomerMap] = useState<Record<string, string>>({});
@@ -69,18 +80,29 @@ export default function HomeDashboard() {
 	// Notification popup state
 	const [showNotifications, setShowNotifications] = useState(false);
 	const [showStorePicker, setShowStorePicker] = useState(false);
+	const [showAddStore, setShowAddStore] = useState(false);
+	const [newStoreTitle, setNewStoreTitle] = useState("");
+	const [savingStore, setSavingStore] = useState(false);
+	const [storeError, setStoreError] = useState("");
 
 	useEffect(() => {
 		async function loadData() {
+			if (effectiveUser === undefined) return;
+
+			const isAdmin = effectiveUser?.role === "Admin";
+			const assignedStoreId = effectiveUser?.storeId || null;
 			let txs = globalTransactions;
 			let custs = globalCustomers;
 			let purs = globalPurchases;
 			let store = globalStore;
 			let prods = globalProducts;
 			let sups = globalSuppliers;
+			let stores = availableStores;
 
-			if (txs === undefined || custs === undefined || purs === undefined || store === undefined || prods === undefined || sups === undefined) {
-				const savedStoreId = localStorage.getItem("currentStoreId");
+			if (txs === undefined || custs === undefined || purs === undefined || store === undefined || prods === undefined || sups === undefined || stores === undefined) {
+				const savedStoreId = isAdmin
+					? localStorage.getItem("currentStoreId")
+					: assignedStoreId;
 				const qs = savedStoreId ? `?storeId=${savedStoreId}` : "";
 
 				const [txRes, custRes, purRes, storeRes, prodRes, supRes] = await Promise.all([
@@ -91,19 +113,22 @@ export default function HomeDashboard() {
 					fetch(`/api/products`),
 					fetch(`/api/suppliers`),
 				]);
-				txs = await txRes.json();
-				custs = await custRes.json();
-				purs = await purRes.json();
-				const fetchedStores = await storeRes.json();
-				prods = await prodRes.json();
-				sups = await supRes.json();
+				txs = await parseApiArray(txRes);
+				custs = await parseApiArray(custRes);
+				purs = await parseApiArray(purRes);
+				const fetchedStores = await parseApiArray<StoreType>(storeRes);
+				stores = isAdmin
+					? fetchedStores
+					: fetchedStores.filter((s) => s._id === assignedStoreId);
+				prods = await parseApiArray(prodRes);
+				sups = await parseApiArray(supRes);
 
 				// Determine active store
-				if (fetchedStores.length > 0) {
+				if (stores.length > 0) {
 					if (savedStoreId) {
-						store = fetchedStores.find((s: any) => s._id === savedStoreId) || fetchedStores[0];
+						store = stores.find((s: any) => s._id === savedStoreId) || stores[0];
 					} else {
-						store = fetchedStores[0];
+						store = stores[0];
 						if (store?._id) localStorage.setItem("currentStoreId", store?._id);
 						else store = null;
 					}
@@ -111,7 +136,7 @@ export default function HomeDashboard() {
 					store = null;
 				}
 
-				setAvailableStores(fetchedStores || []);
+				setAvailableStores(stores || []);
 				setGlobalTransactions(txs || []);
 				setGlobalCustomers(custs || []);
 				setGlobalPurchases(purs || []);
@@ -131,6 +156,50 @@ export default function HomeDashboard() {
 			const pMap: Record<string, any> = {};
 			(prods || []).forEach((p: any) => { pMap[p._id] = p; });
 
+			const storesForTotals = isAdmin
+				? stores || (store ? [store] : [])
+				: store
+					? [store]
+					: [];
+			const activeStoreId = store?._id;
+			const activeTransactions = activeStoreId
+				? (txs || []).filter((tx: any) => tx.storeId === activeStoreId)
+				: (txs || []);
+			const activePurchases = activeStoreId
+				? (purs || []).filter((pur: any) => pur.storeId === activeStoreId)
+				: (purs || []);
+
+			let allStoreTransactions = txs || [];
+			let allStorePurchases = purs || [];
+			if (isAdmin && storesForTotals.length > 1) {
+				const [allTxRes, allPurRes] = await Promise.all([
+					fetch("/api/transactions"),
+					fetch("/api/purchases"),
+				]);
+				allStoreTransactions = await parseApiArray(allTxRes);
+				allStorePurchases = await parseApiArray(allPurRes);
+			}
+
+			const storeMoneyTotals = storesForTotals
+				.filter((s: StoreType) => Boolean(s._id))
+				.map((s: StoreType) => {
+					const storeId = s._id!;
+					const moneyIn = allStoreTransactions
+						.filter((tx: any) => tx.storeId === storeId)
+						.reduce((sum: number, tx: any) => sum + (tx.paidPrice || 0), 0);
+					const moneyOut = allStorePurchases
+						.filter((pur: any) => pur.storeId === storeId)
+						.reduce((sum: number, pur: any) => sum + (pur.totalPrice || 0), 0);
+
+					return {
+						storeId,
+						title: s.title,
+						moneyIn,
+						moneyOut,
+						isCurrent: storeId === activeStoreId,
+					};
+				});
+
 			let totalCurrentProfit = 0;
 			let totalIdealProfit = 0;
 			let totalDebits = 0;
@@ -140,11 +209,11 @@ export default function HomeDashboard() {
 			const debitTxs: any[] = [];
 			const chartMap: Record<string, any> = {};
 
-			(txs || []).forEach((tx: any) => {
+			activeTransactions.forEach((tx: any) => {
 				let totalCost = 0;
 				let totalGross = 0;
 
-				tx.products.forEach((p: any) => {
+				tx.products?.forEach((p: any) => {
 					totalCost += p.unitBuyingPrice * p.amount;
 					totalGross += p.unitPrice * p.amount;
 				});
@@ -174,13 +243,15 @@ export default function HomeDashboard() {
 			});
 
 			const chartDataArr = Object.values(chartMap);
-			const outOfStoreTransactions = (txs || []).filter(
+			const outOfStoreTransactions = activeTransactions.filter(
 				(tx: TransactionType) => tx.isOutOfStore,
 			);
 
 				// Compute self debit from purchases
-				const supplierDebits = (purs || []).filter((p: any) => p.paymentStatus !== "Paid");
-				(purs || []).forEach((pur: any) => {
+				const supplierDebits = isAdmin
+					? activePurchases.filter((p: any) => p.paymentStatus !== "Paid")
+					: [];
+				activePurchases.forEach((pur: any) => {
 					totalSpentPurchases += pur.totalPrice;
 				});
 				supplierDebits.forEach((pur: any) => {
@@ -223,6 +294,7 @@ export default function HomeDashboard() {
 					totalSelfDebit,
 					totalSpentPurchases,
 					totalGainedTransactions,
+					storeMoneyTotals,
 					debitTransactions: debitTxs.sort((a,b) => new Date(a.shouldBePaidBeforeDate).getTime() - new Date(b.shouldBePaidBeforeDate).getTime()),
 						supplierDebits,
 					outOfStoreTransactions,
@@ -234,7 +306,7 @@ export default function HomeDashboard() {
 		}
 
 		loadData();
-	}, [globalTransactions, globalCustomers, globalPurchases, globalStore, globalProducts, globalSuppliers, setGlobalTransactions, setGlobalCustomers, setGlobalPurchases, setGlobalStore, setGlobalProducts, setGlobalSuppliers, setAvailableStores]);
+	}, [availableStores, globalTransactions, globalCustomers, globalPurchases, globalStore, globalProducts, globalSuppliers, effectiveUser, setGlobalTransactions, setGlobalCustomers, setGlobalPurchases, setGlobalStore, setGlobalProducts, setGlobalSuppliers, setAvailableStores]);
 
 	if (loading || !dashboardData) {
 		return (
@@ -253,6 +325,7 @@ export default function HomeDashboard() {
 		totalSelfDebit,
 		totalSpentPurchases,
 		totalGainedTransactions,
+		storeMoneyTotals,
 		debitTransactions,
 		supplierDebits,
 		outOfStoreTransactions,
@@ -260,23 +333,59 @@ export default function HomeDashboard() {
 		unapprovedItems,
 		gradientOffset
 	} = dashboardData;
+	const isAdmin = effectiveUser?.role === "Admin";
 
 	const notificationCount =
 		debitTransactions.length +
-		supplierDebits.length +
+		(isAdmin ? supplierDebits.length : 0) +
 		outOfStoreTransactions.length +
 		lowStock.length +
 		unapprovedItems.length;
 
-	const userName = "User"; // Public metadata allows any user
+	// const userName = "User"; // Public metadata allows any user
 
-	const handleSelectStore = (store: any) => {
+	const handleSelectStore = (store: StoreType) => {
+		if (!store._id) return;
 		localStorage.setItem("currentStoreId", store._id);
 		setGlobalStore(store);
 		setGlobalTransactions(undefined);
 		setGlobalPurchases(undefined);
 		setShowStorePicker(false);
 		setLoading(true);
+	};
+
+	const handleCreateStore = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!newStoreTitle.trim()) return;
+		setSavingStore(true);
+		setStoreError("");
+
+		try {
+			const res = await fetch("/api/stores", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ title: newStoreTitle.trim(), inventory: [] }),
+			});
+			const created = await res.json();
+			if (!res.ok) {
+				setStoreError(created.error || "Failed to create store");
+				return;
+			}
+
+			const updatedStores = [...(availableStores || []), created];
+			setAvailableStores(updatedStores);
+			localStorage.setItem("currentStoreId", created._id);
+			setGlobalStore(created);
+			setGlobalTransactions(undefined);
+			setGlobalPurchases(undefined);
+			setNewStoreTitle("");
+			setShowAddStore(false);
+			setLoading(true);
+		} catch {
+			setStoreError("Failed to create store");
+		} finally {
+			setSavingStore(false);
+		}
 	};
 
 	return (
@@ -286,12 +395,12 @@ export default function HomeDashboard() {
 		<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-theme-border/50 pb-6 pt-2">
 		<div className="flex flex-col gap-1">
 		<h1 className="text-3xl font-extrabold tracking-tight">
-		Welcome back, <span className="text-theme-accent">{userName}</span>!
+		Welcome back, <span className="text-theme-accent">{effectiveUser?.firstName || "User"}</span>!
 		</h1>
 		<p className="text-theme-text/50">Here is what's happening today in <span className="font-bold text-theme-accent">{globalStore?.title || "your store"}</span>.</p>
 		</div>
 		<div className="flex items-center gap-3">
-		{availableStores && availableStores.length > 1 && (
+		{isAdmin && (availableStores?.length ?? 0) > 0 && (
 			<div className="relative">
 			<button
 			onClick={() => setShowStorePicker((v) => !v)}
@@ -314,7 +423,7 @@ export default function HomeDashboard() {
 				exit={{ opacity: 0, y: -8 }}
 				className="absolute right-0 top-full mt-2 z-50 min-w-[220px] bg-theme-card border border-theme-border/50 rounded-2xl shadow-xl overflow-hidden"
 				>
-				{availableStores.map((s) => (
+				{availableStores!.map((s) => (
 					<button
 					key={s._id}
 					onClick={() => handleSelectStore(s)}
@@ -327,11 +436,28 @@ export default function HomeDashboard() {
 					{s.title}
 					</button>
 				))}
+				{isAdmin && (
+				<button
+					onClick={() => { setShowStorePicker(false); setShowAddStore(true); }}
+					className="w-full text-left px-4 py-3 border-t border-theme-border/50 text-theme-accent font-semibold hover:bg-theme-accent/10 transition-colors flex items-center gap-2"
+				>
+					<FiPlus /> Add Store
+				</button>
+				)}
 				</motion.div>
 				</>
 			)}
 			</AnimatePresence>
 			</div>
+		)}
+		{isAdmin && (
+		<button
+			onClick={() => setShowAddStore(true)}
+			className="flex items-center gap-2 px-4 py-2 bg-theme-accent/20 text-theme-accent rounded-full font-medium hover:bg-theme-accent hover:text-white transition-all"
+		>
+			<FiPlus />
+			<span className="hidden sm:inline">Add Store</span>
+		</button>
 		)}
 		<button 
 		onClick={() => setShowNotifications(true)}
@@ -347,6 +473,21 @@ export default function HomeDashboard() {
 		</div>
 		</div>
 
+		{!globalStore && (
+			<EmptyState
+				title="No store yet"
+				message="Create your first store to start tracking inventory, purchases, and transactions."
+				action={isAdmin ? (
+					<button
+						onClick={() => setShowAddStore(true)}
+						className="flex items-center gap-2 px-5 py-2.5 bg-theme-accent text-theme-background rounded-full font-semibold hover:opacity-90 transition-all"
+					>
+						<FiPlus /> Create Store
+					</button>
+				) : undefined}
+			/>
+		)}
+
 		{/* Summary Overview */}
 		<motion.div
 		initial={{ opacity: 0, y: 20 }}
@@ -357,24 +498,75 @@ export default function HomeDashboard() {
 		<div className="flex flex-col gap-2">
 		<span className="font-bold tracking-widest text-xs uppercase text-theme-accent">Financial Overview</span>
 		<h2 className="text-2xl font-extrabold tracking-tight">Money In &amp; Out</h2>
-		<p className="text-theme-text/50 text-sm">Lifetime totals for this store</p>
+		<p className="text-theme-text/50 text-sm">Current totals for {globalStore?.title || "this store"}</p>
 			</div>
 		<div className="flex flex-col sm:flex-row gap-8 sm:gap-16">
 		<div className="flex flex-col gap-1">
-		<span className="text-theme-text/50 text-xs uppercase tracking-wider font-semibold">Total Spent (Purchases)</span>
+		<span className="text-theme-text/50 text-xs uppercase tracking-wider font-semibold">Current Money Out</span>
 		<span className="text-4xl lg:text-5xl font-extrabold text-orange-400 tracking-tighter">
 		${totalSpentPurchases.toLocaleString(undefined, { minimumFractionDigits: 2 })}
 		</span>
 		</div>
 		<div className="hidden sm:block w-px bg-theme-border/50" />
 		<div className="flex flex-col gap-1">
-		<span className="text-theme-text/50 text-xs uppercase tracking-wider font-semibold">Total Gained (Transactions)</span>
+		<span className="text-theme-text/50 text-xs uppercase tracking-wider font-semibold">Current Money In</span>
 		<span className="text-4xl lg:text-5xl font-extrabold text-emerald-400 tracking-tighter">
 		${totalGainedTransactions.toLocaleString(undefined, { minimumFractionDigits: 2 })}
 		</span>
 		</div>
 		</div>
 		</div>
+		{storeMoneyTotals.length > 0 && (
+			<div className="mt-8 pt-6 border-t border-theme-border/50">
+				<div className="flex items-center justify-between gap-4 mb-4">
+					<h3 className="text-sm font-black uppercase tracking-widest text-theme-text/60">
+						Stores
+					</h3>
+					<span className="text-xs text-theme-text/40">
+						Money in and out by store
+					</span>
+				</div>
+				<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+					{storeMoneyTotals.map((storeTotal) => (
+						<div
+							key={storeTotal.storeId}
+							className={`rounded-2xl border p-4 bg-theme-background/35 ${
+								storeTotal.isCurrent
+									? "border-theme-accent/60 shadow-[0_0_20px_rgba(34,211,238,0.08)]"
+									: "border-theme-border/40"
+							}`}
+						>
+							<div className="flex items-center justify-between gap-3 mb-3">
+								<span className="font-bold truncate">{storeTotal.title}</span>
+								{storeTotal.isCurrent && (
+									<span className="text-[10px] uppercase tracking-widest text-theme-accent font-black">
+										Current
+									</span>
+								)}
+							</div>
+							<div className="grid grid-cols-2 gap-3">
+								<div className="flex flex-col gap-1">
+									<span className="text-[10px] uppercase tracking-widest text-theme-text/40 font-bold">
+										Money In
+									</span>
+									<span className="text-lg font-black text-emerald-400">
+										${storeTotal.moneyIn.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+									</span>
+								</div>
+								<div className="flex flex-col gap-1">
+									<span className="text-[10px] uppercase tracking-widest text-theme-text/40 font-bold">
+										Money Out
+									</span>
+									<span className="text-lg font-black text-orange-400">
+										${storeTotal.moneyOut.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+									</span>
+								</div>
+							</div>
+						</div>
+					))}
+				</div>
+			</div>
+		)}
 		</motion.div>
 
 		{/* Header Stat Cards */}
@@ -438,6 +630,7 @@ export default function HomeDashboard() {
 		</h2>
 		</motion.div>
 
+		{isAdmin && (
 		<motion.div 
 		initial={{ opacity: 0, y: 20 }}
 		animate={{ opacity: 1, y: 0 }}
@@ -457,6 +650,7 @@ export default function HomeDashboard() {
 		${totalSelfDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
 		</h2>
 		</motion.div>
+		)}
 		</div>
 
 		{/* Main Chart Section */}
@@ -605,7 +799,7 @@ export default function HomeDashboard() {
 			)}
 
 			{/* Debits to Suppliers */}
-			{supplierDebits.length > 0 && (
+			{isAdmin && supplierDebits.length > 0 && (
 				<div className="flex flex-col gap-3">
 				<div className="flex items-center gap-2 border-b border-theme-border/50 pb-2 mb-2">
 				<FiAlertCircle className="text-orange-400 text-lg" />
@@ -662,6 +856,63 @@ export default function HomeDashboard() {
 			</motion.div>
 			</div>
 		)}
+		</AnimatePresence>
+
+		{/* Add Store Modal */}
+		<AnimatePresence>
+			{isAdmin && showAddStore && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+						onClick={() => setShowAddStore(false)}
+					/>
+					<motion.div
+						initial={{ opacity: 0, scale: 0.9, y: 20 }}
+						animate={{ opacity: 1, scale: 1, y: 0 }}
+						exit={{ opacity: 0, scale: 0.9, y: 20 }}
+						className="bg-theme-background relative z-10 w-full max-w-md rounded-3xl p-6 shadow-2xl flex flex-col gap-5"
+					>
+						<div className="flex justify-between items-center">
+							<h3 className="text-2xl font-bold tracking-tight">New Store</h3>
+							<button
+								onClick={() => setShowAddStore(false)}
+								className="p-2 bg-theme-card rounded-full text-theme-text/60 hover:text-theme-text"
+							>
+								<FiX />
+							</button>
+						</div>
+						<form onSubmit={handleCreateStore} className="flex flex-col gap-4">
+							<div className="flex flex-col gap-2">
+								<label className="text-sm font-semibold text-theme-text/70 uppercase">
+									Store Name
+								</label>
+								<input
+									type="text"
+									required
+									value={newStoreTitle}
+									onChange={(e) => setNewStoreTitle(e.target.value)}
+									placeholder="e.g. Downtown Branch"
+									className="p-3 rounded-xl bg-theme-card outline-none text-theme-text border border-theme-border/30 focus:border-theme-accent"
+								/>
+							</div>
+							{storeError && (
+								<p className="text-red-400 text-sm font-medium">{storeError}</p>
+							)}
+							<button
+								type="submit"
+								disabled={savingStore || !newStoreTitle.trim()}
+								className="flex items-center justify-center gap-2 px-6 py-3 bg-theme-accent text-theme-background rounded-full font-bold hover:opacity-90 disabled:opacity-50 transition-all"
+							>
+								{savingStore ? <CgSpinner className="animate-spin" /> : <FiPlus />}
+								Create Store
+							</button>
+						</form>
+					</motion.div>
+				</div>
+			)}
 		</AnimatePresence>
 
 		</div>

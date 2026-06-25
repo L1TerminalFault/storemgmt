@@ -6,8 +6,12 @@ import { motion } from "framer-motion";
 import { FiUsers, FiTrash2, FiUserPlus } from "react-icons/fi";
 import { CgSpinner } from "react-icons/cg";
 import Link from "next/link";
+import EmptyState from "@/components/EmptyState";
 import { useStoreStore } from "@/lib/store";
+import { parseApiArray } from "@/lib/api-util";
 import { isAdmin } from "@/lib/utils";
+
+import type { StoreType } from "@/lib/types";
 
 type StaffMember = {
 	email: string;
@@ -46,14 +50,14 @@ export default function StaffSettingsPage() {
 				]);
 
 				if (staffRes.ok) {
-					setStaff(await staffRes.json());
+					setStaff(await parseApiArray(staffRes));
 				}
 
 				if (storesRes) {
-					const stores = await storesRes.json();
+					const stores: StoreType[] = await parseApiArray(storesRes);
 					setAvailableStores(stores);
 					if (stores.length > 0) {
-						setStoreId((prev) => prev || stores[0]._id);
+						setStoreId((prev) => prev || stores[0]._id || "");
 					}
 				} else if (availableStores?.length) {
 					setStoreId((prev) => prev || availableStores[0]._id || "");
@@ -165,6 +169,17 @@ export default function StaffSettingsPage() {
 						Enter the email of a user who has already signed up. They will get access to the selected store under your admin account.
 					</p>
 
+					{(availableStores || []).length === 0 ? (
+						<EmptyState
+							title="No stores available"
+							message="Create a store on the Home page before assigning staff."
+							action={
+								<Link href="/home" className="px-5 py-2.5 bg-theme-accent text-theme-background rounded-full font-semibold hover:opacity-90">
+									Go to Home
+								</Link>
+							}
+						/>
+					) : (
 					<form onSubmit={handleAssign} className="flex flex-col gap-4">
 						<input
 							type="email"
@@ -195,6 +210,7 @@ export default function StaffSettingsPage() {
 							Assign to Store
 						</button>
 					</form>
+					)}
 
 					{error && <p className="text-red-400 text-sm font-medium">{error}</p>}
 					{success && <p className="text-emerald-400 text-sm font-medium">{success}</p>}
@@ -204,7 +220,7 @@ export default function StaffSettingsPage() {
 					<div className="text-xl font-bold tracking-wide">Current Staff</div>
 
 					{staff.length === 0 ? (
-						<p className="text-theme-text/50 text-sm">No sales users assigned yet.</p>
+						<EmptyState title="No sales users assigned yet" message="Assign a user by email once they have signed up with Clerk." />
 					) : (
 						<div className="flex flex-col gap-3">
 							{staff.map((member) => (

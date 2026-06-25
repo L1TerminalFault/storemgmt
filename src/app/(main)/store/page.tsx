@@ -18,6 +18,10 @@ import {
 } from "react-icons/fi";
 import Link from "next/link";
 import type { StoreType } from "@/lib/types";
+import { parseApiArray } from "@/lib/api-util";
+import EmptyState from "@/components/EmptyState";
+
+import type { PurchaseType } from "@/lib/types";
 
 type Tab = "inventory" | "purchases";
 
@@ -49,6 +53,7 @@ export default function StorePage() {
 	const setGlobalPurchases = useStoreStore((s) => s.setPurchases);
 	const globalSuppliers = useStoreStore((s) => s.suppliers);
 	const setGlobalSuppliers = useStoreStore((s) => s.setSuppliers);
+	const effectiveUser = useStoreStore((s) => s.effectiveUser);
 
 	// Local states for UI rendering
 	const [localStoresList, setLocalStoresList] = useState<any[] | null>(null);
@@ -71,6 +76,10 @@ export default function StorePage() {
 
 	useEffect(() => {
 		async function loadData() {
+			if (effectiveUser === undefined) return;
+
+			const isAdmin = effectiveUser?.role === "Admin";
+			const assignedStoreId = effectiveUser?.storeId || null;
 			let pData = globalProducts;
 			let purData = globalPurchases;
 			let supData = globalSuppliers;
@@ -82,25 +91,38 @@ export default function StorePage() {
 					fetch("/api/purchases"),
 					fetch("/api/suppliers"),
 				]);
-				const sData = await sRes.json();
-				pData = await pRes.json();
-				purData = await purRes.json();
-				supData = await supRes.json();
+				const sData = await parseApiArray<StoreType>(sRes);
+				pData = await parseApiArray(pRes);
+				purData = await parseApiArray(purRes);
+				supData = await parseApiArray(supRes);
 
-				if (sData && sData.length > 0) setStore(sData[0] as unknown as StoreType);
-				else setStore(null);
+				const scopedStores = isAdmin
+					? sData
+					: sData.filter((s) => s._id === assignedStoreId);
+				const savedStoreId = isAdmin
+					? localStorage.getItem("currentStoreId")
+					: assignedStoreId;
+				const active =
+					(savedStoreId && scopedStores.find((s) => s._id === savedStoreId)) ||
+					scopedStores[0] ||
+					null;
+				setStore(active as StoreType | null);
 
 				setGlobalProducts(pData || []);
 				setGlobalPurchases(purData || []);
 				setGlobalSuppliers(supData || []);
 				
-				setLocalStoresList(sData || []);
+				setLocalStoresList(scopedStores || []);
 			} else {
 				setLocalStoresList(globalStore ? [globalStore] : []);
 			}
 
 			setProductsList(pData || []);
-			setPurchasesList(purData || []);
+			setPurchasesList(
+				isAdmin
+					? purData || []
+					: (purData || []).filter((p: any) => p.storeId === assignedStoreId),
+			);
 			setSuppliersList(supData || []);
 
 			// FIX: touched here
@@ -109,9 +131,10 @@ export default function StorePage() {
 			setLoading(false);
 		}
 		loadData();
-	}, [globalStore, globalProducts, globalPurchases, globalSuppliers, setStore, setGlobalProducts, setGlobalPurchases, setGlobalSuppliers]);
+	}, [globalStore, globalProducts, globalPurchases, globalSuppliers, effectiveUser, setStore, setGlobalProducts, setGlobalPurchases, setGlobalSuppliers]);
 
 	const handleApprove = async (storeId: string, productId: string) => {
+		if (effectiveUser?.role !== "Admin") return;
 		if (!localStoresList) return;
 		// Find the store and update inventory item
 		const store = localStoresList.find((s) => s._id === storeId);
@@ -135,7 +158,7 @@ export default function StorePage() {
 		});
 
 		const storeRes = await fetch("/api/stores");
-		const sData = await storeRes.json();
+		const sData = await parseApiArray<StoreType>(storeRes);
 		setLocalStoresList(sData);
 		if (sData && sData.length > 0) {
 			setStore(sData[0] as unknown as StoreType);
@@ -144,6 +167,7 @@ export default function StorePage() {
 
 	// Add Purchase Handlers
 	const handleAddPurchaseItem = () => {
+		if (effectiveUser?.role !== "Admin") return;
 		if (!productsList?.length) return;
 		setPurchaseItems([
 			...purchaseItems,
@@ -178,6 +202,7 @@ export default function StorePage() {
 	);
 
 	const handleSubmitPurchase = async () => {
+		if (effectiveUser?.role !== "Admin") return;
 		if (!purchaseItems.length || !localStoresList?.length) return;
 		setSavingPurchase(true);
 
@@ -208,7 +233,7 @@ export default function StorePage() {
 			fetch("/api/purchases"),
 			fetch("/api/stores")
 		]);
-		const allPurs = await purRes.json();
+		const allPurs: PurchaseType[] = await parseApiArray(purRes);
 		const sData = await sRes.json();
 
 		setPurchasesList(allPurs);
@@ -226,13 +251,7 @@ export default function StorePage() {
 		setPurchaseComment("");
 	};
 
-	if (
-		loading ||
-		!localStoresList ||
-		!productsList ||
-		!purchasesList ||
-		!suppliersList
-	) {
+	if (loading) {
 		return (
 			<div className="w-full h-full flex flex-col items-center justify-center text-theme-text opacity-70">
 				<CgSpinner className="animate-spin text-4xl mb-4 text-theme-accent" />
@@ -241,16 +260,45 @@ export default function StorePage() {
 		);
 	}
 
+	if (!localStoresList?.length) {
+		return (
+			<div className="w-full h-full flex flex-col gap-6 p-6 px-4 md:px-8 overflow-y-auto mb-[100px] scrollbar-hidden">
+				<h2 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
+					<FiLayers className="text-theme-accent" /> Store Management
+				</h2>
+				<EmptyState
+					title="No store found"
+					message="Create a store from the Home page to manage inventory and purchases."
+					action={
+						<Link
+							href="/home"
+							className="px-5 py-2.5 bg-theme-accent text-theme-background rounded-full font-semibold hover:opacity-90 transition-all"
+						>
+							Go to Home
+						</Link>
+					}
+				/>
+			</div>
+		);
+	}
+
+	const productsListSafe = productsList ?? [];
+	const purchasesListSafe = purchasesList ?? [];
+	const suppliersListSafe = suppliersList ?? [];
+	const isAdmin = effectiveUser?.role === "Admin";
+	const currentTab: Tab = isAdmin ? activeTab : "inventory";
+
 	// Build a quick lookup map: productId → product
 	const productsMap = new Map<string, any>();
-	productsList.forEach((p: any) => productsMap.set(p._id, p));
+	productsListSafe.forEach((p: any) => productsMap.set(p._id, p));
 
 	// Build lookup map for suppliers
 	const suppliersMap = new Map<string, any>();
-	suppliersList.forEach((s: any) => suppliersMap.set(s._id, s));
+	suppliersListSafe.forEach((s: any) => suppliersMap.set(s._id, s));
 
-	// Use the first store's inventory
-	const activeStore = localStoresList[0];
+	// Use active store from list or global
+	const activeStore =
+		localStoresList.find((s) => s._id === globalStore?._id) || localStoresList[0];
 	const inventory = activeStore?.inventory ?? [];
 	const totalUnits = inventory.reduce(
 		(sum: number, item: any) => sum + item.amount,
@@ -259,7 +307,9 @@ export default function StorePage() {
 
 	const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
 		{ key: "inventory", label: "Inventory", icon: <FiPackage /> },
-		{ key: "purchases", label: "Purchases", icon: <FiShoppingBag /> },
+		...(isAdmin
+			? [{ key: "purchases" as const, label: "Purchases", icon: <FiShoppingBag /> }]
+			: []),
 	];
 
 	return (
@@ -274,6 +324,7 @@ export default function StorePage() {
 						{activeStore.title}
 					</p>
 				</div>
+				{isAdmin && (
 				<Link
 					href="/inputs"
 					className="flex items-center gap-2 px-4 py-2.5 bg-theme-accent/20 text-theme-accent rounded-full font-medium hover:bg-theme-accent hover:text-white transition-all shrink-0"
@@ -281,6 +332,7 @@ export default function StorePage() {
 					<FiList />
 					<span className="hidden sm:inline">Inputs</span>
 				</Link>
+				)}
 			</div>
 
 			{/* Tab Bar - Match /inputs UI style */}
@@ -290,7 +342,7 @@ export default function StorePage() {
 						key={tab.key}
 						onClick={() => setActiveTab(tab.key)}
 						className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all duration-300 ${
-							activeTab === tab.key
+							currentTab === tab.key
 								? "bg-theme-accent text-white shadow-lg"
 								: "text-theme-text/60 hover:text-theme-text"
 						}`}
@@ -302,7 +354,7 @@ export default function StorePage() {
 			</div>
 
 			{/* Tab Content: Inventory */}
-			{activeTab === "inventory" && (
+			{currentTab === "inventory" && (
 				<div className="flex flex-col gap-3">
 					<div className="flex items-center justify-between mb-2">
 						<span className="text-theme-text/50 text-sm">
@@ -310,13 +362,21 @@ export default function StorePage() {
 						</span>
 					</div>
 
-					{inventory.length === 0 && (
-						<div className="w-full p-8 text-center border border-dashed border-theme-border rounded-xl text-theme-text/50">
-							No inventory items found.
-						</div>
-					)}
-
-					{inventory.map((item: any, idx: number) => {
+					{inventory.length === 0 ? (
+						<EmptyState
+							title="No inventory yet"
+							message="Add products via Inputs, then log a purchase to stock this store."
+							action={isAdmin ? (
+								<Link
+									href="/inputs"
+									className="px-5 py-2.5 bg-theme-accent/20 text-theme-accent rounded-full font-semibold hover:bg-theme-accent hover:text-white transition-all"
+								>
+									Go to Inputs
+								</Link>
+							) : undefined}
+						/>
+					) : (
+					inventory.map((item: any, idx: number) => {
 						const product = productsMap.get(item.productId);
 						const name = product?.name ?? `Product #${item.productId}`;
 						const type = product?.type ?? "Unknown";
@@ -357,9 +417,9 @@ export default function StorePage() {
 								</div>
 
 								{/* Approve Button or Badge */}
-								{item.approved ? (
+								{item.approved || !isAdmin ? (
 									<div className="px-3 py-1 rounded-full text-xs font-bold shrink-0 bg-emerald-500/20 text-emerald-400">
-										Approved
+										{item.approved ? "Approved" : "Pending"}
 									</div>
 								) : (
 									<button
@@ -377,32 +437,35 @@ export default function StorePage() {
 								)}
 							</motion.div>
 						);
-					})}
+					})
+					)}
 				</div>
 			)}
 
 			{/* Tab Content: Purchases */}
-			{activeTab === "purchases" && (
+			{currentTab === "purchases" && (
 				<div className="flex flex-col gap-3">
 					<div className="flex items-center justify-between mb-2">
 						<span className="text-theme-text/50 text-sm">
-							{purchasesList.length} purchases
+							{purchasesListSafe.length} purchases
 						</span>
+						{isAdmin && (
 						<button
 							onClick={() => setShowAddPurchase(true)}
 							className="flex items-center gap-2 px-4 py-2 bg-theme-accent/20 text-theme-accent rounded-full font-medium hover:bg-theme-accent hover:text-white transition-all"
 						>
 							<FiPlus /> Add Purchase
 						</button>
+						)}
 					</div>
 
-					{purchasesList.length === 0 && (
-						<div className="w-full p-8 text-center border border-dashed border-theme-border rounded-xl text-theme-text/50">
-							No purchases found.
-						</div>
-					)}
-
-					{purchasesList.map((pur: any, idx: number) => (
+					{purchasesListSafe.length === 0 ? (
+						<EmptyState
+							title="No purchases yet"
+							message="Log a purchase to restock inventory from suppliers."
+						/>
+					) : (
+					purchasesListSafe.map((pur: any, idx: number) => (
 						<motion.div
 							key={pur._id}
 							initial={{ opacity: 0, y: 12 }}
@@ -449,13 +512,14 @@ export default function StorePage() {
 								{pur.paymentStatus}
 							</div>
 						</motion.div>
-					))}
+					))
+					)}
 				</div>
 			)}
 
 			{/* Add Purchase Pop-up Modal */}
 			<AnimatePresence>
-				{showAddPurchase && (
+				{isAdmin && showAddPurchase && (
 					<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 						<motion.div
 							initial={{ opacity: 0 }}
