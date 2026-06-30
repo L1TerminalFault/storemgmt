@@ -319,7 +319,7 @@ export default function CustomersCheckout() {
 															className="w-full p-2.5 rounded-lg bg-theme-background outline-none text-theme-text"
 														/>
 													</div>
-													<div className="w-full md:w-40">
+													<div className="w-full md:w-40/">
 														<label className="text-xs text-theme-text/50 mb-1 block">
 															Selling Price ($)
 														</label>
@@ -338,12 +338,17 @@ export default function CustomersCheckout() {
 															className="w-full p-2.5 rounded-lg bg-theme-background outline-none text-theme-text"
 														/>
 													</div>
+													<div className="">
+														<label className="text-xs text-theme-text/50 mb-1 block">
+															Qty
+														</label>
 													<button
 														onClick={() => removeCartItem(idx)}
 														className="md:mt-5 p-3 text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white rounded-xl transition-all"
 													>
 														<FiTrash2 />
 													</button>
+													</div>
 													</div>
 												</div>
 											))}
