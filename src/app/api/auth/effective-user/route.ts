@@ -23,6 +23,7 @@ export async function GET() {
 		userId: adminData.userId,
 		clerkId: adminData.clerkId,
 		storeId: adminData.storeId,
+		firstName: adminData.firstName,
 		role: adminData.role,
 	});
 }

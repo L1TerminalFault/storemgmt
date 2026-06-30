@@ -103,46 +103,46 @@ export default function HomeDashboard() {
 				const savedStoreId = isAdmin
 					? localStorage.getItem("currentStoreId")
 					: assignedStoreId;
-				const qs = savedStoreId ? `?storeId=${savedStoreId}` : "";
+					const qs = savedStoreId ? `?storeId=${savedStoreId}` : "";
 
-				const [txRes, custRes, purRes, storeRes, prodRes, supRes] = await Promise.all([
-					fetch(`/api/transactions${qs}`),
-					fetch(`/api/customers`), // Customers usually global for admin, but can append qs if needed
-					fetch(`/api/purchases${qs}`),
-					fetch(`/api/stores`), // We fetch all available stores
-					fetch(`/api/products`),
-					fetch(`/api/suppliers`),
-				]);
-				txs = await parseApiArray(txRes);
-				custs = await parseApiArray(custRes);
-				purs = await parseApiArray(purRes);
-				const fetchedStores = await parseApiArray<StoreType>(storeRes);
-				stores = isAdmin
-					? fetchedStores
-					: fetchedStores.filter((s) => s._id === assignedStoreId);
-				prods = await parseApiArray(prodRes);
-				sups = await parseApiArray(supRes);
+					const [txRes, custRes, purRes, storeRes, prodRes, supRes] = await Promise.all([
+						fetch(`/api/transactions${qs}`),
+						fetch(`/api/customers`), // Customers usually global for admin, but can append qs if needed
+						fetch(`/api/purchases${qs}`),
+						fetch(`/api/stores`), // We fetch all available stores
+						fetch(`/api/products`),
+						fetch(`/api/suppliers`),
+					]);
+					txs = await parseApiArray(txRes);
+					custs = await parseApiArray(custRes);
+					purs = await parseApiArray(purRes);
+					const fetchedStores = await parseApiArray<StoreType>(storeRes);
+					stores = isAdmin
+						? fetchedStores
+						: fetchedStores.filter((s) => s._id === assignedStoreId);
+						prods = await parseApiArray(prodRes);
+						sups = await parseApiArray(supRes);
 
-				// Determine active store
-				if (stores.length > 0) {
-					if (savedStoreId) {
-						store = stores.find((s: any) => s._id === savedStoreId) || stores[0];
-					} else {
-						store = stores[0];
-						if (store?._id) localStorage.setItem("currentStoreId", store?._id);
-						else store = null;
-					}
-				} else {
-					store = null;
-				}
+						// Determine active store
+						if (stores.length > 0) {
+							if (savedStoreId) {
+								store = stores.find((s: any) => s._id === savedStoreId) || stores[0];
+							} else {
+								store = stores[0];
+								if (store?._id) localStorage.setItem("currentStoreId", store?._id);
+								else store = null;
+							}
+						} else {
+							store = null;
+						}
 
-				setAvailableStores(stores || []);
-				setGlobalTransactions(txs || []);
-				setGlobalCustomers(custs || []);
-				setGlobalPurchases(purs || []);
-				setGlobalStore(store);
-				setGlobalProducts(prods || []);
-				setGlobalSuppliers(sups || []);
+						setAvailableStores(stores || []);
+						setGlobalTransactions(txs || []);
+						setGlobalCustomers(custs || []);
+						setGlobalPurchases(purs || []);
+						setGlobalStore(store);
+						setGlobalProducts(prods || []);
+						setGlobalSuppliers(sups || []);
 			}
 
 			const cMap: Record<string, string> = {};
@@ -161,148 +161,148 @@ export default function HomeDashboard() {
 				: store
 					? [store]
 					: [];
-			const activeStoreId = store?._id;
-			const activeTransactions = activeStoreId
-				? (txs || []).filter((tx: any) => tx.storeId === activeStoreId)
-				: (txs || []);
-			const activePurchases = activeStoreId
-				? (purs || []).filter((pur: any) => pur.storeId === activeStoreId)
-				: (purs || []);
+					const activeStoreId = store?._id;
+					const activeTransactions = activeStoreId
+						? (txs || []).filter((tx: any) => tx.storeId === activeStoreId)
+						: (txs || []);
+						const activePurchases = activeStoreId
+							? (purs || []).filter((pur: any) => pur.storeId === activeStoreId)
+							: (purs || []);
 
-			let allStoreTransactions = txs || [];
-			let allStorePurchases = purs || [];
-			if (isAdmin && storesForTotals.length > 1) {
-				const [allTxRes, allPurRes] = await Promise.all([
-					fetch("/api/transactions"),
-					fetch("/api/purchases"),
-				]);
-				allStoreTransactions = await parseApiArray(allTxRes);
-				allStorePurchases = await parseApiArray(allPurRes);
-			}
+							let allStoreTransactions = txs || [];
+							let allStorePurchases = purs || [];
+							if (isAdmin && storesForTotals.length > 1) {
+								const [allTxRes, allPurRes] = await Promise.all([
+									fetch("/api/transactions"),
+									fetch("/api/purchases"),
+								]);
+								allStoreTransactions = await parseApiArray(allTxRes);
+								allStorePurchases = await parseApiArray(allPurRes);
+							}
 
-			const storeMoneyTotals = storesForTotals
-				.filter((s: StoreType) => Boolean(s._id))
-				.map((s: StoreType) => {
-					const storeId = s._id!;
-					const moneyIn = allStoreTransactions
-						.filter((tx: any) => tx.storeId === storeId)
-						.reduce((sum: number, tx: any) => sum + (tx.paidPrice || 0), 0);
-					const moneyOut = allStorePurchases
-						.filter((pur: any) => pur.storeId === storeId)
-						.reduce((sum: number, pur: any) => sum + (pur.totalPrice || 0), 0);
+							const storeMoneyTotals = storesForTotals
+							.filter((s: StoreType) => Boolean(s._id))
+							.map((s: StoreType) => {
+								const storeId = s._id!;
+								const moneyIn = allStoreTransactions
+								.filter((tx: any) => tx.storeId === storeId)
+								.reduce((sum: number, tx: any) => sum + (tx.paidPrice || 0), 0);
+								const moneyOut = allStorePurchases
+								.filter((pur: any) => pur.storeId === storeId)
+								.reduce((sum: number, pur: any) => sum + (pur.totalPrice || 0), 0);
 
-					return {
-						storeId,
-						title: s.title,
-						moneyIn,
-						moneyOut,
-						isCurrent: storeId === activeStoreId,
-					};
-				});
+								return {
+									storeId,
+									title: s.title,
+									moneyIn,
+									moneyOut,
+									isCurrent: storeId === activeStoreId,
+								};
+							});
 
-			let totalCurrentProfit = 0;
-			let totalIdealProfit = 0;
-			let totalDebits = 0;
-			let totalSelfDebit = 0;
-			let totalSpentPurchases = 0;
-			let totalGainedTransactions = 0;
-			const debitTxs: any[] = [];
-			const chartMap: Record<string, any> = {};
+							let totalCurrentProfit = 0;
+							let totalIdealProfit = 0;
+							let totalDebits = 0;
+							let totalSelfDebit = 0;
+							let totalSpentPurchases = 0;
+							let totalGainedTransactions = 0;
+							const debitTxs: any[] = [];
+							const chartMap: Record<string, any> = {};
 
-			activeTransactions.forEach((tx: any) => {
-				let totalCost = 0;
-				let totalGross = 0;
+							activeTransactions.forEach((tx: any) => {
+								let totalCost = 0;
+								let totalGross = 0;
 
-				tx.products?.forEach((p: any) => {
-					totalCost += p.unitBuyingPrice * p.amount;
-					totalGross += p.unitPrice * p.amount;
-				});
+								tx.products?.forEach((p: any) => {
+									totalCost += p.unitBuyingPrice * p.amount;
+									totalGross += p.unitPrice * p.amount;
+								});
 
-				const idealProfit = totalGross - totalCost;
-				const currentProfit = tx.paidPrice - totalCost; // What we actually made right now
+								const idealProfit = totalGross - totalCost;
+								const currentProfit = tx.paidPrice - totalCost; // What we actually made right now
 
-				totalIdealProfit += idealProfit;
-				totalCurrentProfit += currentProfit;
-				totalGainedTransactions += tx.paidPrice;
+								totalIdealProfit += idealProfit;
+								totalCurrentProfit += currentProfit;
+								totalGainedTransactions += tx.paidPrice;
 
-				const debit = tx.totalPrice - tx.paidPrice;
-				if (debit > 0) {
-					totalDebits += debit;
-					debitTxs.push({ ...tx, debit });
-				}
+								const debit = tx.totalPrice - tx.paidPrice;
+								if (debit > 0) {
+									totalDebits += debit;
+									debitTxs.push({ ...tx, debit });
+								}
 
-				const dateStr = new Date(tx.createdAt).toLocaleDateString(undefined, {
-					month: 'short', day: 'numeric'
-				});
+								const dateStr = new Date(tx.createdAt).toLocaleDateString(undefined, {
+									month: 'short', day: 'numeric'
+								});
 
-				if (!chartMap[dateStr]) {
-					chartMap[dateStr] = { date: dateStr, currentProfit: 0, idealProfit: 0 };
-				}
-				chartMap[dateStr].currentProfit += currentProfit;
-				chartMap[dateStr].idealProfit += idealProfit;
-			});
+								if (!chartMap[dateStr]) {
+									chartMap[dateStr] = { date: dateStr, currentProfit: 0, idealProfit: 0 };
+								}
+								chartMap[dateStr].currentProfit += currentProfit;
+								chartMap[dateStr].idealProfit += idealProfit;
+							});
 
-			const chartDataArr = Object.values(chartMap);
-			const outOfStoreTransactions = activeTransactions.filter(
-				(tx: TransactionType) => tx.isOutOfStore,
-			);
+							const chartDataArr = Object.values(chartMap);
+							const outOfStoreTransactions = activeTransactions.filter(
+								(tx: TransactionType) => tx.isOutOfStore,
+							);
 
-				// Compute self debit from purchases
-				const supplierDebits = isAdmin
-					? activePurchases.filter((p: any) => p.paymentStatus !== "Paid")
-					: [];
-				activePurchases.forEach((pur: any) => {
-					totalSpentPurchases += pur.totalPrice;
-				});
-				supplierDebits.forEach((pur: any) => {
-					totalSelfDebit += (pur.totalPrice - pur.paidPrice);
-				});
+								// Compute self debit from purchases
+								const supplierDebits = isAdmin
+									? activePurchases.filter((p: any) => p.paymentStatus !== "Paid")
+									: [];
+									activePurchases.forEach((pur: any) => {
+										totalSpentPurchases += pur.totalPrice;
+									});
+									supplierDebits.forEach((pur: any) => {
+										totalSelfDebit += (pur.totalPrice - pur.paidPrice);
+									});
 
-				const lowStock: any[] = [];
-				const unapprovedItems: any[] = [];
+									const lowStock: any[] = [];
+									const unapprovedItems: any[] = [];
 
-				if (store?.inventory) {
-					store.inventory.forEach((item: any) => {
-						const prodName = pMap[item.productId]?.name || "Unknown Product";
-						if (item.amount < 50) {
-							lowStock.push({ ...item, name: prodName });
-						}
-						if (!item.approved) {
-							unapprovedItems.push({ ...item, name: prodName });
-						}
-					});
-				}
+									if (store?.inventory) {
+										store.inventory.forEach((item: any) => {
+											const prodName = pMap[item.productId]?.name || "Unknown Product";
+											if (item.amount < 50) {
+												lowStock.push({ ...item, name: prodName });
+											}
+											if (!item.approved) {
+												unapprovedItems.push({ ...item, name: prodName });
+											}
+										});
+									}
 
-				// Calculate gradient offset for current profit (to color red below 0)
-				const currentProfits = chartDataArr.map(d => d.currentProfit);
-				const dataMax = Math.max(...currentProfits, 0);
-				const dataMin = Math.min(...currentProfits, 0);
-				let offset = 0;
-				if (dataMax <= 0) {
-					offset = 0; // all red
-				} else if (dataMin >= 0) {
-					offset = 1; // all green
-				} else {
-					offset = dataMax / (dataMax - dataMin);
-				}
+									// Calculate gradient offset for current profit (to color red below 0)
+									const currentProfits = chartDataArr.map(d => d.currentProfit);
+									const dataMax = Math.max(...currentProfits, 0);
+									const dataMin = Math.min(...currentProfits, 0);
+									let offset = 0;
+									if (dataMax <= 0) {
+										offset = 0; // all red
+									} else if (dataMin >= 0) {
+										offset = 1; // all green
+									} else {
+										offset = dataMax / (dataMax - dataMin);
+									}
 
-				setDashboardData({
-					chartData: chartDataArr,
-					totalCurrentProfit,
-					totalIdealProfit,
-					totalDebits,
-					totalSelfDebit,
-					totalSpentPurchases,
-					totalGainedTransactions,
-					storeMoneyTotals,
-					debitTransactions: debitTxs.sort((a,b) => new Date(a.shouldBePaidBeforeDate).getTime() - new Date(b.shouldBePaidBeforeDate).getTime()),
-						supplierDebits,
-					outOfStoreTransactions,
-					lowStock,
-					unapprovedItems,
-					gradientOffset: offset
-				});
-				setLoading(false);
+									setDashboardData({
+										chartData: chartDataArr,
+										totalCurrentProfit,
+										totalIdealProfit,
+										totalDebits,
+										totalSelfDebit,
+										totalSpentPurchases,
+										totalGainedTransactions,
+										storeMoneyTotals,
+										debitTransactions: debitTxs.sort((a,b) => new Date(a.shouldBePaidBeforeDate).getTime() - new Date(b.shouldBePaidBeforeDate).getTime()),
+											supplierDebits,
+										outOfStoreTransactions,
+										lowStock,
+										unapprovedItems,
+										gradientOffset: offset
+									});
+									setLoading(false);
 		}
 
 		loadData();
@@ -392,14 +392,14 @@ export default function HomeDashboard() {
 		<div className="w-full h-full flex flex-col gap-6 p-6 px-4 md:px-8 overflow-y-auto mb-[100px] scrollbar-hidden">
 
 		{/* Top Header */}
-		<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-theme-border/50 pb-6 pt-2">
-		<div className="flex flex-col gap-1">
+		<div className="flex flex-col sm:flex-row w-full justify-between items-start sm:items-center gap-4 border-b border-theme-border/50 pb-6 pt-2">
+		<div className="flex flex-col gap-1 w-full">
 		<h1 className="text-3xl font-extrabold tracking-tight">
 		Welcome back, <span className="text-theme-accent">{effectiveUser?.firstName || "User"}</span>!
 		</h1>
 		<p className="text-theme-text/50">Here is what's happening today in <span className="font-bold text-theme-accent">{globalStore?.title || "your store"}</span>.</p>
 		</div>
-		<div className="flex items-center gap-3">
+		<div className="flex items-center w-full justify-end gap-3">
 		{isAdmin && (availableStores?.length ?? 0) > 0 && (
 			<div className="relative">
 			<button
@@ -412,7 +412,7 @@ export default function HomeDashboard() {
 			</button>
 			<AnimatePresence>
 			{showStorePicker && (
-				<>
+				<div>
 				<div
 				className="fixed inset-0 z-40"
 				onClick={() => setShowStorePicker(false)}
@@ -421,7 +421,7 @@ export default function HomeDashboard() {
 				initial={{ opacity: 0, y: -8 }}
 				animate={{ opacity: 1, y: 0 }}
 				exit={{ opacity: 0, y: -8 }}
-				className="absolute right-0 top-full mt-2 z-50 min-w-[220px] bg-theme-card border border-theme-border/50 rounded-2xl shadow-xl overflow-hidden"
+				className="absolute right-0 top-full mt-2 z-50 min-w-[220px] backdrop-blur-xl bg-theme-card border border-theme-border/50 rounded-2xl shadow-xl overflow-hidden"
 				>
 				{availableStores!.map((s) => (
 					<button
@@ -437,27 +437,27 @@ export default function HomeDashboard() {
 					</button>
 				))}
 				{isAdmin && (
-				<button
+					<button
 					onClick={() => { setShowStorePicker(false); setShowAddStore(true); }}
 					className="w-full text-left px-4 py-3 border-t border-theme-border/50 text-theme-accent font-semibold hover:bg-theme-accent/10 transition-colors flex items-center gap-2"
-				>
+					>
 					<FiPlus /> Add Store
-				</button>
+					</button>
 				)}
 				</motion.div>
-				</>
+				</div>
 			)}
 			</AnimatePresence>
 			</div>
 		)}
 		{isAdmin && (
-		<button
+			<button
 			onClick={() => setShowAddStore(true)}
 			className="flex items-center gap-2 px-4 py-2 bg-theme-accent/20 text-theme-accent rounded-full font-medium hover:bg-theme-accent hover:text-white transition-all"
-		>
+			>
 			<FiPlus />
 			<span className="hidden sm:inline">Add Store</span>
-		</button>
+			</button>
 		)}
 		<button 
 		onClick={() => setShowNotifications(true)}
@@ -475,16 +475,16 @@ export default function HomeDashboard() {
 
 		{!globalStore && (
 			<EmptyState
-				title="No store yet"
-				message="Create your first store to start tracking inventory, purchases, and transactions."
-				action={isAdmin ? (
-					<button
-						onClick={() => setShowAddStore(true)}
-						className="flex items-center gap-2 px-5 py-2.5 bg-theme-accent text-theme-background rounded-full font-semibold hover:opacity-90 transition-all"
-					>
-						<FiPlus /> Create Store
-					</button>
-				) : undefined}
+			title="No store yet"
+			message="Create your first store to start tracking inventory, purchases, and transactions."
+			action={isAdmin ? (
+				<button
+				onClick={() => setShowAddStore(true)}
+				className="flex items-center gap-2 px-5 py-2.5 bg-theme-accent text-theme-background rounded-full font-semibold hover:opacity-90 transition-all"
+				>
+				<FiPlus /> Create Store
+				</button>
+			) : undefined}
 			/>
 		)}
 
@@ -499,7 +499,7 @@ export default function HomeDashboard() {
 		<span className="font-bold tracking-widest text-xs uppercase text-theme-accent">Financial Overview</span>
 		<h2 className="text-2xl font-extrabold tracking-tight">Money In &amp; Out</h2>
 		<p className="text-theme-text/50 text-sm">Current totals for {globalStore?.title || "this store"}</p>
-			</div>
+		</div>
 		<div className="flex flex-col sm:flex-row gap-8 sm:gap-16">
 		<div className="flex flex-col gap-1">
 		<span className="text-theme-text/50 text-xs uppercase tracking-wider font-semibold">Current Money Out</span>
@@ -518,53 +518,53 @@ export default function HomeDashboard() {
 		</div>
 		{storeMoneyTotals.length > 0 && (
 			<div className="mt-8 pt-6 border-t border-theme-border/50">
-				<div className="flex items-center justify-between gap-4 mb-4">
-					<h3 className="text-sm font-black uppercase tracking-widest text-theme-text/60">
-						Stores
-					</h3>
-					<span className="text-xs text-theme-text/40">
-						Money in and out by store
+			<div className="flex items-center justify-between gap-4 mb-4">
+			<h3 className="text-sm font-black uppercase tracking-widest text-theme-text/60">
+			Stores
+			</h3>
+			<span className="text-xs text-theme-text/40">
+			Money in and out by store
+			</span>
+			</div>
+			<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+			{storeMoneyTotals.map((storeTotal) => (
+				<div
+				key={storeTotal.storeId}
+				className={`rounded-2xl border p-4 bg-theme-background/35 ${
+					storeTotal.isCurrent
+						? "border-theme-accent/60 shadow-[0_0_20px_rgba(34,211,238,0.08)]"
+						: "border-theme-border/40"
+				}`}
+				>
+				<div className="flex items-center justify-between gap-3 mb-3">
+				<span className="font-bold truncate">{storeTotal.title}</span>
+				{storeTotal.isCurrent && (
+					<span className="text-[10px] uppercase tracking-widest text-theme-accent font-black">
+					Current
 					</span>
+				)}
 				</div>
-				<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-					{storeMoneyTotals.map((storeTotal) => (
-						<div
-							key={storeTotal.storeId}
-							className={`rounded-2xl border p-4 bg-theme-background/35 ${
-								storeTotal.isCurrent
-									? "border-theme-accent/60 shadow-[0_0_20px_rgba(34,211,238,0.08)]"
-									: "border-theme-border/40"
-							}`}
-						>
-							<div className="flex items-center justify-between gap-3 mb-3">
-								<span className="font-bold truncate">{storeTotal.title}</span>
-								{storeTotal.isCurrent && (
-									<span className="text-[10px] uppercase tracking-widest text-theme-accent font-black">
-										Current
-									</span>
-								)}
-							</div>
-							<div className="grid grid-cols-2 gap-3">
-								<div className="flex flex-col gap-1">
-									<span className="text-[10px] uppercase tracking-widest text-theme-text/40 font-bold">
-										Money In
-									</span>
-									<span className="text-lg font-black text-emerald-400">
-										${storeTotal.moneyIn.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-									</span>
-								</div>
-								<div className="flex flex-col gap-1">
-									<span className="text-[10px] uppercase tracking-widest text-theme-text/40 font-bold">
-										Money Out
-									</span>
-									<span className="text-lg font-black text-orange-400">
-										${storeTotal.moneyOut.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-									</span>
-								</div>
-							</div>
-						</div>
-					))}
+				<div className="grid grid-cols-2 gap-3">
+				<div className="flex flex-col gap-1">
+				<span className="text-[10px] uppercase tracking-widest text-theme-text/40 font-bold">
+				Money In
+				</span>
+				<span className="text-lg font-black text-emerald-400">
+				${storeTotal.moneyIn.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+				</span>
 				</div>
+				<div className="flex flex-col gap-1">
+				<span className="text-[10px] uppercase tracking-widest text-theme-text/40 font-bold">
+				Money Out
+				</span>
+				<span className="text-lg font-black text-orange-400">
+				${storeTotal.moneyOut.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+				</span>
+				</div>
+				</div>
+				</div>
+			))}
+			</div>
 			</div>
 		)}
 		</motion.div>
@@ -631,25 +631,25 @@ export default function HomeDashboard() {
 		</motion.div>
 
 		{isAdmin && (
-		<motion.div 
-		initial={{ opacity: 0, y: 20 }}
-		animate={{ opacity: 1, y: 0 }}
-		transition={{ delay: 0.3 }}
-		className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-lg border border-theme-border/30"
-		>
-		<div className="flex justify-between items-start mb-2">
-		<div className="flex flex-col gap-1">
-		<span className="font-bold tracking-widest text-xs uppercase text-orange-400">Self Debits</span>
-		<span className="text-theme-text/40 text-[10px] uppercase">To Suppliers</span>
-		</div>
-		<div className="p-3 bg-orange-500/10 text-orange-400 rounded-xl">
-		<FiTrendingDown className="text-xl" />
-		</div>
-		</div>
-		<h2 className="text-3xl lg:text-4xl font-extrabold text-theme-text tracking-tighter mt-2">
-		${totalSelfDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-		</h2>
-		</motion.div>
+			<motion.div 
+			initial={{ opacity: 0, y: 20 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ delay: 0.3 }}
+			className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-lg border border-theme-border/30"
+			>
+			<div className="flex justify-between items-start mb-2">
+			<div className="flex flex-col gap-1">
+			<span className="font-bold tracking-widest text-xs uppercase text-orange-400">Self Debits</span>
+			<span className="text-theme-text/40 text-[10px] uppercase">To Suppliers</span>
+			</div>
+			<div className="p-3 bg-orange-500/10 text-orange-400 rounded-xl">
+			<FiTrendingDown className="text-xl" />
+			</div>
+			</div>
+			<h2 className="text-3xl lg:text-4xl font-extrabold text-theme-text tracking-tighter mt-2">
+			${totalSelfDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+			</h2>
+			</motion.div>
 		)}
 		</div>
 
@@ -661,14 +661,14 @@ export default function HomeDashboard() {
 		className="w-full flex flex-col xl:flex-row gap-6 mt-4"
 		>
 		{/* Current Profit Chart (Changes to red if < 0) */}
-		<div className="flex-1 min-w-0 h-[350px] bg-theme-card p-6 rounded-3xl shadow-xl flex flex-col border border-theme-border/30">
+		<div className="/flex-1 w-full min-w-0 h-[350px] bg-theme-card p-6 rounded-3xl shadow-xl flex flex-col border border-theme-border/30">
 		<div className="flex items-center gap-3 mb-6">
 		<div className="w-3 h-3 rounded-full bg-emerald-500"></div>
 		<h3 className="text-lg font-bold tracking-wide">Current Profit</h3>
 		</div>
-		<div className="flex-1 w-full min-h-0">
+		<div className="flex-1 w-full min-h-[240px]">
 		<ResponsiveContainer width="100%" height="100%">
-		<AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+		<AreaChart data={chartData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
 		<defs>
 		<linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
 		<stop offset={gradientOffset} stopColor="#10b981" stopOpacity={0.8}/>
@@ -677,7 +677,13 @@ export default function HomeDashboard() {
 		</defs>
 		<CartesianGrid strokeDasharray="3 3" stroke="var(--borderCol)" vertical={false} />
 		<XAxis dataKey="date" stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} />
-		<YAxis stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+		<YAxis stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false}
+		tickFormatter={(value) => {
+          return new Intl.NumberFormat('en-US', {
+            notation: 'compact',
+            maximumFractionDigits: 1
+          }).format(value);
+        }}/>
 		<Tooltip 
 		contentStyle={{ backgroundColor: 'var(--cardBg)', borderRadius: '12px', border: '1px solid var(--borderCol)', backdropFilter: 'blur(10px)' }}
 		itemStyle={{ color: 'var(--fg)' }}
@@ -689,14 +695,14 @@ export default function HomeDashboard() {
 		</div>
 
 		{/* Ideal Profit Chart */}
-		<div className="flex-1 min-w-0 h-[350px] bg-theme-card p-6 rounded-3xl shadow-xl flex flex-col border border-theme-border/30">
+		<div className="/flex-1 min-w-0 w-full h-[350px] bg-theme-card p-6 rounded-3xl shadow-xl flex flex-col border border-theme-border/30">
 		<div className="flex items-center gap-3 mb-6">
 		<div className="w-3 h-3 rounded-full bg-sky-500"></div>
 		<h3 className="text-lg font-bold tracking-wide">Ideal Profit</h3>
 		</div>
-		<div className="flex-1 w-full min-h-0">
+		<div className="flex-1 w-full min-h-[240px]">
 		<ResponsiveContainer width="100%" height="100%">
-		<AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+		<AreaChart data={chartData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
 		<defs>
 		<linearGradient id="colorIdeal" x1="0" y1="0" x2="0" y2="1">
 		<stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.6}/>
@@ -705,7 +711,14 @@ export default function HomeDashboard() {
 		</defs>
 		<CartesianGrid strokeDasharray="3 3" stroke="var(--borderCol)" vertical={false} />
 		<XAxis dataKey="date" stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} />
-		<YAxis stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+		<YAxis stroke="var(--fg)" opacity={0.5} tickLine={false} axisLine={false}
+		tickFormatter={(value) => {
+          return new Intl.NumberFormat('en-US', {
+            notation: 'compact',
+            maximumFractionDigits: 1
+          }).format(value)
+        }}
+		/>
 		<Tooltip 
 		contentStyle={{ backgroundColor: 'var(--cardBg)', borderRadius: '12px', border: '1px solid var(--borderCol)', backdropFilter: 'blur(10px)' }}
 		itemStyle={{ color: 'var(--fg)' }}
@@ -860,59 +873,59 @@ export default function HomeDashboard() {
 
 		{/* Add Store Modal */}
 		<AnimatePresence>
-			{isAdmin && showAddStore && (
-				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-						onClick={() => setShowAddStore(false)}
-					/>
-					<motion.div
-						initial={{ opacity: 0, scale: 0.9, y: 20 }}
-						animate={{ opacity: 1, scale: 1, y: 0 }}
-						exit={{ opacity: 0, scale: 0.9, y: 20 }}
-						className="bg-theme-background relative z-10 w-full max-w-md rounded-3xl p-6 shadow-2xl flex flex-col gap-5"
-					>
-						<div className="flex justify-between items-center">
-							<h3 className="text-2xl font-bold tracking-tight">New Store</h3>
-							<button
-								onClick={() => setShowAddStore(false)}
-								className="p-2 bg-theme-card rounded-full text-theme-text/60 hover:text-theme-text"
-							>
-								<FiX />
-							</button>
-						</div>
-						<form onSubmit={handleCreateStore} className="flex flex-col gap-4">
-							<div className="flex flex-col gap-2">
-								<label className="text-sm font-semibold text-theme-text/70 uppercase">
-									Store Name
-								</label>
-								<input
-									type="text"
-									required
-									value={newStoreTitle}
-									onChange={(e) => setNewStoreTitle(e.target.value)}
-									placeholder="e.g. Downtown Branch"
-									className="p-3 rounded-xl bg-theme-card outline-none text-theme-text border border-theme-border/30 focus:border-theme-accent"
-								/>
-							</div>
-							{storeError && (
-								<p className="text-red-400 text-sm font-medium">{storeError}</p>
-							)}
-							<button
-								type="submit"
-								disabled={savingStore || !newStoreTitle.trim()}
-								className="flex items-center justify-center gap-2 px-6 py-3 bg-theme-accent text-theme-background rounded-full font-bold hover:opacity-90 disabled:opacity-50 transition-all"
-							>
-								{savingStore ? <CgSpinner className="animate-spin" /> : <FiPlus />}
-								Create Store
-							</button>
-						</form>
-					</motion.div>
-				</div>
+		{isAdmin && showAddStore && (
+			<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+			<motion.div
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			exit={{ opacity: 0 }}
+			className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+			onClick={() => setShowAddStore(false)}
+			/>
+			<motion.div
+			initial={{ opacity: 0, scale: 0.9, y: 20 }}
+			animate={{ opacity: 1, scale: 1, y: 0 }}
+			exit={{ opacity: 0, scale: 0.9, y: 20 }}
+			className="bg-theme-background relative z-10 w-full max-w-md rounded-3xl p-6 shadow-2xl flex flex-col gap-5"
+			>
+			<div className="flex justify-between items-center">
+			<h3 className="text-2xl font-bold tracking-tight">New Store</h3>
+			<button
+			onClick={() => setShowAddStore(false)}
+			className="p-2 bg-theme-card rounded-full text-theme-text/60 hover:text-theme-text"
+			>
+			<FiX />
+			</button>
+			</div>
+			<form onSubmit={handleCreateStore} className="flex flex-col gap-4">
+			<div className="flex flex-col gap-2">
+			<label className="text-sm font-semibold text-theme-text/70 uppercase">
+			Store Name
+			</label>
+			<input
+			type="text"
+			required
+			value={newStoreTitle}
+			onChange={(e) => setNewStoreTitle(e.target.value)}
+			placeholder="e.g. Downtown Branch"
+			className="p-3 rounded-xl bg-theme-card outline-none text-theme-text border border-theme-border/30 focus:border-theme-accent"
+			/>
+			</div>
+			{storeError && (
+				<p className="text-red-400 text-sm font-medium">{storeError}</p>
 			)}
+			<button
+			type="submit"
+			disabled={savingStore || !newStoreTitle.trim()}
+			className="flex items-center justify-center gap-2 px-6 py-3 bg-theme-accent text-theme-background rounded-full font-bold hover:opacity-90 disabled:opacity-50 transition-all"
+			>
+			{savingStore ? <CgSpinner className="animate-spin" /> : <FiPlus />}
+			Create Store
+			</button>
+			</form>
+			</motion.div>
+			</div>
+		)}
 		</AnimatePresence>
 
 		</div>

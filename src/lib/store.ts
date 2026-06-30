@@ -6,7 +6,7 @@ export type EffectiveUser = {
 	clerkId?: string;
 	storeId?: string | null;
 	role: "Admin" | "Sales";
-	firstName?: string;
+	firstName: string;
 };
 
 export const useStoreStore = create(

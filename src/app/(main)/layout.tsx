@@ -9,47 +9,47 @@ import NavBar from "@/components/NavBar";
 import { useStoreStore } from "@/lib/store";
 
 export default function MainLayout({
- children,
+	children,
 }: {
- children: Readonly<React.ReactNode>;
+	children: Readonly<React.ReactNode>;
 }) {
- const effectiveUser = useStoreStore((s) => s.effectiveUser);
- const setEffectiveUser = useStoreStore((s) => s.setEffectiveUser);
+	const effectiveUser = useStoreStore((s) => s.effectiveUser);
+	const setEffectiveUser = useStoreStore((s) => s.setEffectiveUser);
 
- useEffect(() => {
- let ignore = false;
+	useEffect(() => {
+		let ignore = false;
 
- async function loadEffectiveUser() {
- if (effectiveUser !== undefined) return;
+		async function loadEffectiveUser() {
+			if (effectiveUser !== undefined) return;
 
- try {
- const res = await fetch("/api/auth/effective-user");
- const data = await res.json();
- if (!ignore) setEffectiveUser(data ?? null);
- } catch {
- if (!ignore) setEffectiveUser({ role: "Sales" });
- }
- }
+			try {
+				const res = await fetch("/api/auth/effective-user");
+				const data = await res.json();
+				if (!ignore) setEffectiveUser(data ?? null);
+			} catch {
+				if (!ignore) setEffectiveUser({ role: "Sales" });
+			}
+		}
 
- loadEffectiveUser();
+		loadEffectiveUser();
 
- return () => {
- ignore = true;
- };
- }, [effectiveUser, setEffectiveUser]);
+		return () => {
+			ignore = true;
+		};
+	}, [effectiveUser, setEffectiveUser]);
 
- return (
- <ClerkProvider
- afterSignOutUrl="/home"
- appearance={{
- theme: dark,
- }}
- >
- <TitleBar />
- <div className="min-h-screen -z-90 flex w-full bg-gray-900/10">
- <div className="py-20 h-full pb-20 flex-1 flex w-full">{children}</div>
- </div>
- <NavBar />
- </ClerkProvider>
- );
+	return (
+		<ClerkProvider
+		afterSignOutUrl="/home"
+		appearance={{
+			theme: dark,
+		}}
+		>
+		<TitleBar />
+		<div className="min-h-screen -z-90 flex w-full bg-gray-900/10">
+		<div className="py-20 h-full pb-20 flex-1 flex w-full">{children}</div>
+		</div>
+		<NavBar />
+		</ClerkProvider>
+	);
 }

@@ -174,22 +174,24 @@ export default function CustomersCheckout() {
 	return (
 		<div className="w-full h-full flex flex-col gap-6 p-6 px-4 md:px-8 overflow-y-auto mb-[100px] scrollbar-hidden">
 			{/* Header — matching store UI pattern */}
-			<div className="flex flex-col gap-2 mb-2">
+			<div className="flex flex-col gap-2 mb-2 w-full">
 				<h2 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
 					<FiUser className="text-theme-accent" /> Customers
 				</h2>
 
-				<div className="flex items-center justify-between mb-2">
-					<p className="text-theme-text/50">
+				<div className="flex flex-col w-full items-center justify-between mb-2">
+					<p className="text-theme-text/50 w-full mb-4">
 						{data.customers.length} customers &mdash; Select to begin a transaction
 					</p>
 
+					<div className="flex w-full justify-end">
 					<button
 						onClick={() => setShowAddCustomer(true)}
 						className="flex items-center gap-2 px-4 py-2 bg-theme-accent/20 text-theme-accent rounded-full font-medium hover:bg-theme-accent hover:text-white transition-all"
 					>
 						<FiPlus /> Add Customer
 					</button>
+					</div>
 				</div>
 
 
@@ -297,7 +299,9 @@ export default function CustomersCheckout() {
 													<div className="flex-1 w-full font-bold text-lg">
 														{item.name}
 													</div>
-													<div className="w-full md:w-32">
+
+													<div className="flex gap-4">
+													<div className="w-1/4 md:w-32">
 														<label className="text-xs text-theme-text/50 mb-1 block">
 															Qty
 														</label>
@@ -333,6 +337,7 @@ export default function CustomersCheckout() {
 															}
 															className="w-full p-2.5 rounded-lg bg-theme-background outline-none text-theme-text"
 														/>
+													</div>
 													</div>
 													<button
 														onClick={() => removeCartItem(idx)}
@@ -391,18 +396,6 @@ export default function CustomersCheckout() {
 													)}
 												</div>
 
-												<div className="flex flex-col gap-2 w-full md:w-1/2">
-													<label className="text-sm font-semibold tracking-wide text-theme-text/70 uppercase">
-														Notes / Comments
-													</label>
-													<textarea
-														value={transactionComment}
-														onChange={(e) => setTransactionComment(e.target.value)}
-														placeholder="Optional comments for this transaction..."
-														className="p-3 rounded-xl bg-theme-card focus:border-theme-accent outline-none text-theme-text transition-all resize-none h-[116px]"
-													/>
-												</div>
-
 												<div className="flex flex-col items-end gap-6 w-full md:w-auto mt-4 md:mt-0">
 													<div className="flex items-center gap-4 bg-theme-card px-6 py-4 rounded-2xl w-full md:w-auto">
 														<span className="text-theme-text/50 font-bold">
@@ -416,6 +409,20 @@ export default function CustomersCheckout() {
 														</span>
 													</div>
 
+												</div>
+
+												<div className="flex flex-col gap-2 w-full md:w-1/2">
+													<label className="text-sm font-semibold tracking-wide text-theme-text/70 uppercase">
+														Notes / Comments
+													</label>
+													<textarea
+														value={transactionComment}
+														onChange={(e) => setTransactionComment(e.target.value)}
+														placeholder="Optional comments for this transaction..."
+														className="p-3 rounded-xl bg-theme-card focus:border-theme-accent outline-none text-theme-text transition-all resize-none h-[116px]"
+													/>
+												</div>
+
 													<button
 														onClick={handleSubmit}
 														disabled={saving}
@@ -427,7 +434,6 @@ export default function CustomersCheckout() {
 															"Complete Transaction"
 														)}
 													</button>
-												</div>
 											</div>
 										)}
 									</motion.div>

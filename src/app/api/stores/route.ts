@@ -4,6 +4,7 @@ import * as dev from "../../../lib/devData";
 
 const isDev = process.env.NODE_ENV === "development";
 
+// console.log(process.env);
 export async function GET(req: Request) {
 	const { searchParams } = new URL(req.url);
 	const storeId = searchParams.get("storeId");
@@ -22,6 +23,7 @@ export async function GET(req: Request) {
 		// If the user has a restricted storeId OR if the client requested a specific store
 		if (adminData.storeId) query._id = adminData.storeId;
 		else if (storeId) query._id = storeId;
+		console.log(query);
 		const data = await Store.find(query);
 		return NextResponse.json(data);
 	} catch {
