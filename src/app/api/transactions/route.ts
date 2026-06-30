@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
 	const body = await req.json();
-	if (!isDev) {
+	if (isDev) {
 		body.clerkId = "dev-user";
 		const { applyTransactionToInventory } = await import("../../../lib/transaction-util");
 		const store = dev.getById("stores", body.storeId);
@@ -61,18 +61,19 @@ export async function POST(req: Request) {
 			return NextResponse.json({ error: "Store not found" }, { status: 404 });
 		}
 
+		const plainInventory = store.inventory.map((item: any) => item.toObject ? item.toObject() : item);
+
 		const { isOutOfStore, inventory } = applyTransactionToInventory(
-			store.inventory,
+			plainInventory,
 			body.products || [],
 		);
 		body.isOutOfStore = isOutOfStore;
 		store.inventory = inventory;
-		console.log("updated store: ", store);
+		// console.log("updated store: ", store);
 		await store.save();
 
-		console.log("failing body: ", body);
 		const newData = await Transaction.create(body);
-		console.log("the new transaction: ", newData);
+		// console.log("the new transaction: ", newData);
 		return NextResponse.json(newData, { status: 201 });
 	} catch (e) {
 		console.log("Transaction Error: POST: ", e);

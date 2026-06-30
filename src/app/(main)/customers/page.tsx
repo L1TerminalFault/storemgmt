@@ -344,7 +344,7 @@ export default function CustomersCheckout() {
 														</label>
 													<button
 														onClick={() => removeCartItem(idx)}
-														className="md:mt-5 p-3 text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white rounded-xl transition-all"
+														className="/md:mt-5 p-3 text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white rounded-xl transition-all"
 													>
 														<FiTrash2 />
 													</button>
@@ -355,7 +355,7 @@ export default function CustomersCheckout() {
 										</div>
 
 										{cart.length > 0 && (
-											<div className="flex flex-col md:flex-row justify-between gap-6 pt-6 border-t border-theme-border mt-2">
+											<div className="flex flex-col md:flex-row /md:items-end justify-between gap-6 pt-6 border-t border-theme-border mt-2">
 												<div className="flex flex-col gap-4 w-full md:w-1/2">
 													<label className="text-sm font-semibold tracking-wide text-theme-text/70 uppercase">
 														Payment Option
@@ -426,8 +426,6 @@ export default function CustomersCheckout() {
 														placeholder="Optional comments for this transaction..."
 														className="p-3 rounded-xl bg-theme-card focus:border-theme-accent outline-none text-theme-text transition-all resize-none h-[116px]"
 													/>
-												</div>
-
 													<button
 														onClick={handleSubmit}
 														disabled={saving}
@@ -439,6 +437,8 @@ export default function CustomersCheckout() {
 															"Complete Transaction"
 														)}
 													</button>
+												</div>
+
 											</div>
 										)}
 									</motion.div>

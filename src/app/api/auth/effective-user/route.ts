@@ -15,6 +15,7 @@ export async function GET() {
 
 	const adminData = await getEffectiveAdminId();
 
+	// console.log(adminData);
 	if (!adminData) {
 		return NextResponse.json({ role: "Sales" });
 	}
