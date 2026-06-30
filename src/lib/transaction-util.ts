@@ -22,7 +22,7 @@ export function applyTransactionToInventory(
 	for (const p of products) {
 		const pid = p.productId; //.toString();
 		// console.log("updated data: ", updated.find(i => i.productId == undefined));
-		const item = updated.find((i) => i._doc.productId/*.toString()*/ === pid);
+		const item = updated.find((i) => i.productId/*.toString()*/ === pid);
 		const available = item?.amount ?? 0;
 
 		if (p.amount > available) {
