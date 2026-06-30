@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 				if (existing) {
 					existing.amount += p.amount;
 				} else {
-					inventory.push({ productId: p.productId, amount: p.amount, approved: true });
+					inventory.push({ productId: p.productId, amount: p.amount, approved: false });
 				}
 			}
 			dev.update("stores", body.storeId, { inventory });
