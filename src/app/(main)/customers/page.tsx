@@ -338,13 +338,13 @@ export default function CustomersCheckout() {
 															className="w-full p-2.5 rounded-lg bg-theme-background outline-none text-theme-text"
 														/>
 													</div>
-													</div>
 													<button
 														onClick={() => removeCartItem(idx)}
 														className="md:mt-5 p-3 text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white rounded-xl transition-all"
 													>
 														<FiTrash2 />
 													</button>
+													</div>
 												</div>
 											))}
 										</div>
