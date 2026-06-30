@@ -417,14 +417,13 @@ export default function StorePage() {
 								</div>
 
 								{/* Approve Button or Badge */}
-								{item.approved || isAdmin ? (
-									<>{item.approved ? <div className="px-3 py-1 rounded-full text-xs font-bold shrink-0 bg-emerald-500/0 text-emerald-400/80">
+								{item.approved ? <div className="px-3 py-1 rounded-full text-xs font-bold shrink-0 bg-emerald-500/0 text-emerald-400/80">
 										Approved
-									</div> :
+									</div> : isAdmin ?
 									<div className="px-3 py-1 rounded-full text-xs font-bold shrink-0 bg-emerald-500/0 text-yellow-400/80">
 										Pending
-									</div>}</>
-								) : (
+									</div>
+								: (
 									<button
 										onClick={() =>
 											handleApprove(
