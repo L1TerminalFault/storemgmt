@@ -340,7 +340,7 @@ export default function CustomersCheckout() {
 													</div>
 													<div className="">
 														<label className="text-xs text-theme-text/50 mb-1 block">
-															Qty
+															Del
 														</label>
 													<button
 														onClick={() => removeCartItem(idx)}
