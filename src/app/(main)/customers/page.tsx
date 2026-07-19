@@ -35,6 +35,9 @@ export default function CustomersCheckout() {
 
 	// Product Popup State
 	const [showProductPopup, setShowProductPopup] = useState(false);
+	const [productSearch, setProductSearch] = useState("");
+	const [selectedCategory, setSelectedCategory] = useState<string>("All");
+	const [selectedSubCategory, setSelectedSubCategory] = useState<string>("All");
 
 	// Add form popups
 	const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -170,6 +173,16 @@ export default function CustomersCheckout() {
 			</div>
 		);
 	}
+
+	const uniqueCategories = data?.products ? Array.from(new Set(data.products.map((p: any) => p.category || p.type).filter(Boolean))) : [];
+	const uniqueSubCategories = data?.products ? Array.from(new Set(data.products.filter((p: any) => selectedCategory === "All" || (p.category || p.type) === selectedCategory).map((p: any) => p.subCategory).filter(Boolean))) : [];
+
+	const filteredProducts = data?.products ? data.products.filter((p: any) => {
+		const matchSearch = p.name.toLowerCase().includes(productSearch.toLowerCase());
+		const matchCat = selectedCategory === "All" || (p.category || p.type) === selectedCategory;
+		const matchSubCat = selectedSubCategory === "All" || p.subCategory === selectedSubCategory;
+		return matchSearch && matchCat && matchSubCat;
+	}) : [];
 
 	return (
 		<div className="w-full h-full flex flex-col gap-6 p-6 px-4 md:px-8 overflow-y-auto mb-[100px] scrollbar-hidden">
@@ -479,14 +492,49 @@ export default function CustomersCheckout() {
 								</button>
 							</div>
 
+							<div className="flex flex-col gap-2 mb-4">
+								<input
+									type="text"
+									placeholder="Search product..."
+									value={productSearch}
+									onChange={(e) => setProductSearch(e.target.value)}
+									className="p-3 rounded-xl bg-theme-card outline-none text-theme-text w-full"
+								/>
+								<div className="flex gap-2">
+									<select
+										value={selectedCategory}
+										onChange={(e) => {
+											setSelectedCategory(e.target.value);
+											setSelectedSubCategory("All");
+										}}
+										className="p-3 rounded-xl bg-theme-card outline-none text-theme-text flex-1"
+									>
+										<option value="All">All Categories</option>
+										{uniqueCategories.map(cat => (
+											<option key={cat as string} value={cat as string}>{cat as string}</option>
+										))}
+									</select>
+									<select
+										value={selectedSubCategory}
+										onChange={(e) => setSelectedSubCategory(e.target.value)}
+										className="p-3 rounded-xl bg-theme-card outline-none text-theme-text flex-1"
+									>
+										<option value="All">All Sub-Categories</option>
+										{uniqueSubCategories.map(subCat => (
+											<option key={subCat as string} value={subCat as string}>{subCat as string}</option>
+										))}
+									</select>
+								</div>
+							</div>
+
 							<div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto scrollbar-hidden">
-								{data.products.length === 0 ? (
+								{filteredProducts.length === 0 ? (
 									<EmptyState
 										title="No products available"
-										message="Add products in Inputs before creating a transaction."
+										message="No products match your search or filter."
 									/>
 								) : (
-								data.products.map((p: any) => (
+								filteredProducts.map((p: any) => (
 									<div
 										key={p._id}
 										onClick={() => handleSelectProduct(p)}
@@ -497,7 +545,7 @@ export default function CustomersCheckout() {
 												{p.name}
 											</span>
 											<span className="text-xs text-theme-text/50 uppercase">
-												{p.type}
+												{p.category || p.type} {p.subCategory ? `• ${p.subCategory}` : ''}
 											</span>
 										</div>
 										<FiPlus className="text-xl text-theme-accent" />

@@ -54,6 +54,10 @@ export default function InputsPage() {
 	const [newProductSubCategory, setNewProductSubCategory] = useState("");
 	const [newProductPrice, setNewProductPrice] = useState(0);
 
+	// Price edit popup state
+	const [pricePopupProduct, setPricePopupProduct] = useState<ProductType | null>(null);
+	const [pricePopupValue, setPricePopupValue] = useState<number>(0);
+
 	// Supplier form fields
 	const [newSupplierName, setNewSupplierName] = useState("");
 
@@ -256,19 +260,18 @@ export default function InputsPage() {
 							</div>
 							<div className="flex flex-col items-end shrink-0">
 								<div className="flex items-center">
-									<span className="text-lg font-extrabold text-emerald-400 mr-1">$</span>
-									<input
-										type="number"
-										min="0"
-										defaultValue={p.unitBuyingPrice}
-										onBlur={(e) => handleUpdateProductPrice(p._id, parseFloat(e.target.value) || 0)}
-										onKeyDown={(e) => {
-											if (e.key === "Enter") {
-												e.currentTarget.blur();
-											}
+									<button
+										onClick={() => {
+											setPricePopupProduct(p);
+											setPricePopupValue(p.unitBuyingPrice);
 										}}
-										className="w-20 bg-transparent text-lg font-extrabold text-emerald-400 outline-none text-right border-b border-transparent focus:border-emerald-400/50 transition-colors"
-									/>
+										className="flex items-center hover:bg-emerald-500/10 px-2 py-1 -mr-2 rounded-lg transition-colors cursor-pointer"
+									>
+										<span className="text-lg font-extrabold text-emerald-400 mr-1">$</span>
+										<span className="text-lg font-extrabold text-emerald-400">
+											{p.unitBuyingPrice}
+										</span>
+									</button>
 								</div>
 								<span className="text-[10px] text-theme-text/40 uppercase">
 									buy price
@@ -455,6 +458,65 @@ export default function InputsPage() {
 								className="w-full p-4 bg-theme-text text-theme-background rounded-xl font-black text-lg hover:opacity-90 transition-opacity hover:scale-[1.03] active:scale-95 duration-300"
 							>
 								Add Product
+							</button>
+						</motion.div>
+					</div>
+				)}
+			</AnimatePresence>
+
+			{/* Edit Price Modal */}
+			<AnimatePresence>
+				{pricePopupProduct && (
+					<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+							onClick={() => setPricePopupProduct(null)}
+						/>
+						<motion.div
+							initial={{ opacity: 0, scale: 0.9, y: 20 }}
+							animate={{ opacity: 1, scale: 1, y: 0 }}
+							exit={{ opacity: 0, scale: 0.9, y: 20 }}
+							className="bg-theme-background relative z-10 w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col gap-5"
+						>
+							<div className="flex justify-between items-center">
+								<h3 className="text-2xl font-bold tracking-tight">
+									Edit Price
+								</h3>
+								<button
+									onClick={() => setPricePopupProduct(null)}
+									className="p-2 bg-theme-card rounded-full text-theme-text/60 hover:text-theme-text hover:bg-theme-border"
+								>
+									<FiX />
+								</button>
+							</div>
+							<div className="text-theme-text/70">
+								Updating price for <strong className="text-theme-text">{pricePopupProduct.name}</strong>
+							</div>
+							<div className="flex flex-col gap-2">
+								<label className="text-sm font-semibold text-theme-text/70 uppercase">
+									New Buying Price ($)
+								</label>
+								<input
+									type="number"
+									value={pricePopupValue}
+									onChange={(e) => setPricePopupValue(parseFloat(e.target.value) || 0)}
+									className="p-3 rounded-xl bg-theme-card outline-none text-theme-text"
+									autoFocus
+								/>
+							</div>
+							<button
+								onClick={() => {
+									if (pricePopupProduct._id) {
+										handleUpdateProductPrice(pricePopupProduct._id, pricePopupValue);
+									}
+									setPricePopupProduct(null);
+								}}
+								className="w-full p-4 bg-emerald-500 text-white rounded-xl font-black text-lg hover:bg-emerald-600 transition-colors active:scale-95 duration-300"
+							>
+								Save Price
 							</button>
 						</motion.div>
 					</div>
