@@ -49,7 +49,8 @@ const supplierSchema = new mongoose.Schema({
 // INFO: Admin use only when purchasing
 const productSchema = new mongoose.Schema({
     clerkId: String,
-    type: { type: String, required: true },
+    category: { type: String, required: true },
+    subCategory: String,
     name: { type: String, required: true },
     // INFO: Admin use only
     unitBuyingPrice: { type: Number, required: true, min: 0 },

@@ -30,6 +30,8 @@ export type ProductType = {
 	_id?: string;
 	clerkId: string;
 	type: string;
+	category?: string;
+	subCategory?: string;
 	name: string;
 	unitBuyingPrice: number;
 	__more: string;

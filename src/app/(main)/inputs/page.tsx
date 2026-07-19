@@ -51,6 +51,7 @@ export default function InputsPage() {
 	// Product form fields
 	const [newProductName, setNewProductName] = useState("");
 	const [newProductType, setNewProductType] = useState("Soap");
+	const [newProductSubCategory, setNewProductSubCategory] = useState("");
 	const [newProductPrice, setNewProductPrice] = useState(0);
 
 	// Supplier form fields
@@ -93,6 +94,8 @@ export default function InputsPage() {
 			body: JSON.stringify({
 				name: newProductName,
 				type: newProductType,
+				category: newProductType,
+				subCategory: newProductSubCategory,
 				unitBuyingPrice: newProductPrice,
 			}),
 		});
@@ -104,12 +107,26 @@ export default function InputsPage() {
 
 		setNewProductName("");
 		setNewProductType("Soap");
+		setNewProductSubCategory("");
 		setNewProductPrice(0);
 		setShowAddProduct(false);
 	};
 
 	const handleRemoveProduct = async (id: string) => {
 		await fetch(`/api/products?id=${id}`, { method: "DELETE" });
+
+		const resRaw = await fetch("/api/products");
+		const allProds: ProductType[] = await parseApiArray(resRaw);
+		setProducts(allProds);
+		setGlobalProducts(allProds);
+	};
+
+	const handleUpdateProductPrice = async (id: string, newPrice: number) => {
+		await fetch("/api/products", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ _id: id, unitBuyingPrice: newPrice }),
+		});
 
 		const resRaw = await fetch("/api/products");
 		const allProds: ProductType[] = await parseApiArray(resRaw);
@@ -226,14 +243,33 @@ export default function InputsPage() {
 								<span className="font-bold text-base truncate">
 									{p.name}
 								</span>
-								<span className="text-xs text-theme-text/50 uppercase tracking-wide">
-									{p.type}
-								</span>
+								<div className="flex items-center gap-2">
+									<span className="text-xs text-theme-text/50 uppercase tracking-wide">
+										{p.category || p.type}
+									</span>
+									{p.subCategory && (
+										<span className="text-[10px] px-2 py-0.5 rounded-full bg-theme-text/10 text-theme-text/60 uppercase tracking-wider">
+											{p.subCategory}
+										</span>
+									)}
+								</div>
 							</div>
 							<div className="flex flex-col items-end shrink-0">
-								<span className="text-lg font-extrabold text-emerald-400">
-									${p.unitBuyingPrice}
-								</span>
+								<div className="flex items-center">
+									<span className="text-lg font-extrabold text-emerald-400 mr-1">$</span>
+									<input
+										type="number"
+										min="0"
+										defaultValue={p.unitBuyingPrice}
+										onBlur={(e) => handleUpdateProductPrice(p._id, parseFloat(e.target.value) || 0)}
+										onKeyDown={(e) => {
+											if (e.key === "Enter") {
+												e.currentTarget.blur();
+											}
+										}}
+										className="w-20 bg-transparent text-lg font-extrabold text-emerald-400 outline-none text-right border-b border-transparent focus:border-emerald-400/50 transition-colors"
+									/>
+								</div>
 								<span className="text-[10px] text-theme-text/40 uppercase">
 									buy price
 								</span>
@@ -376,17 +412,27 @@ export default function InputsPage() {
 							</div>
 							<div className="flex flex-col gap-2">
 								<label className="text-sm font-semibold text-theme-text/70 uppercase">
-									Type
+									Category
 								</label>
-								<select
+								<input
+									type="text"
 									value={newProductType}
 									onChange={(e) => setNewProductType(e.target.value)}
-									className="p-3 rounded-xl bg-theme-card outline-none text-theme-text appearance-none"
-								>
-									<option value="Soap">Soap</option>
-									<option value="Deodorant">Deodorant</option>
-									<option value="Other">Other</option>
-								</select>
+									placeholder="Category e.g. Soap"
+									className="p-3 rounded-xl bg-theme-card outline-none text-theme-text"
+								/>
+							</div>
+							<div className="flex flex-col gap-2">
+								<label className="text-sm font-semibold text-theme-text/70 uppercase">
+									Sub Category
+								</label>
+								<input
+									type="text"
+									value={newProductSubCategory}
+									onChange={(e) => setNewProductSubCategory(e.target.value)}
+									placeholder="e.g. BATH, CASH, OTHER..."
+									className="p-3 rounded-xl bg-theme-card outline-none text-theme-text"
+								/>
 							</div>
 							<div className="flex flex-col gap-2">
 								<label className="text-sm font-semibold text-theme-text/70 uppercase">
