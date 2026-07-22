@@ -45,7 +45,8 @@ const CATALOGUE_CATEGORIES: Record<string, string[]> = {
 	"STATIONARY": ["EXERCISE BOOK", "PEN"],
 	"SWEET": ["CANDY"],
 	"SWEETIES": ["CANDY", "CHEWING GUM"],
-	"TEA": ["TEA"]
+	"TEA": ["TEA"],
+	"OTHER": []
 };
 
 export default function InputsPage() {
