@@ -54,6 +54,9 @@ export default function InputsPage() {
 	const [newProductSubCategory, setNewProductSubCategory] = useState("");
 	const [newProductPrice, setNewProductPrice] = useState(0);
 
+	const [isNewCategory, setIsNewCategory] = useState(false);
+	const [isNewSubCategory, setIsNewSubCategory] = useState(false);
+
 	// Price edit popup state
 	const [pricePopupProduct, setPricePopupProduct] = useState<ProductType | null>(null);
 	const [pricePopupValue, setPricePopupValue] = useState<number>(0);
@@ -113,6 +116,8 @@ export default function InputsPage() {
 		setNewProductType("Soap");
 		setNewProductSubCategory("");
 		setNewProductPrice(0);
+		setIsNewCategory(false);
+		setIsNewSubCategory(false);
 		setShowAddProduct(false);
 	};
 
@@ -172,6 +177,19 @@ export default function InputsPage() {
 			</div>
 		);
 	}
+
+	const uniqueCategories = Array.from(
+		new Set(products.map((p) => (p.category || p.type)?.trim()).filter(Boolean))
+	).sort();
+
+	const uniqueSubCategories = Array.from(
+		new Set(
+			products
+				.filter((p) => (p.category || p.type)?.trim() === newProductType?.trim())
+				.map((p) => p.subCategory?.trim())
+				.filter(Boolean)
+		)
+	).sort();
 
 	const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
 		{ key: "products", label: "Products", icon: <FiBox /> },
@@ -417,25 +435,91 @@ export default function InputsPage() {
 								<label className="text-sm font-semibold text-theme-text/70 uppercase">
 									Category
 								</label>
-								<input
-									type="text"
-									value={newProductType}
-									onChange={(e) => setNewProductType(e.target.value)}
-									placeholder="Category e.g. Soap"
-									className="p-3 rounded-xl bg-theme-card outline-none text-theme-text"
-								/>
+								{uniqueCategories.length > 0 && !isNewCategory ? (
+									<select
+										value={newProductType}
+										onChange={(e) => {
+											if (e.target.value === "__NEW__") {
+												setIsNewCategory(true);
+												setNewProductType("");
+											} else {
+												setNewProductType(e.target.value);
+											}
+										}}
+										className="p-3 rounded-xl bg-theme-card outline-none text-theme-text appearance-none cursor-pointer"
+									>
+										{!newProductType && <option value="" disabled>Select category</option>}
+										{uniqueCategories.map(cat => (
+											<option key={cat as string} value={cat as string}>{cat as string}</option>
+										))}
+										<option value="__NEW__">+ Add New Category</option>
+									</select>
+								) : (
+									<div className="flex gap-2">
+										<input
+											type="text"
+											value={newProductType}
+											onChange={(e) => setNewProductType(e.target.value)}
+											placeholder="Category e.g. Soap"
+											className="p-3 rounded-xl bg-theme-card outline-none text-theme-text flex-1"
+											autoFocus={isNewCategory}
+										/>
+										{uniqueCategories.length > 0 && (
+											<button 
+												onClick={() => { setIsNewCategory(false); setNewProductType(uniqueCategories[0] as string); }}
+												className="p-3 bg-theme-border rounded-xl text-theme-text/70 hover:text-theme-text transition-colors"
+												title="Choose existing"
+											>
+												<FiX />
+											</button>
+										)}
+									</div>
+								)}
 							</div>
 							<div className="flex flex-col gap-2">
 								<label className="text-sm font-semibold text-theme-text/70 uppercase">
 									Sub Category
 								</label>
-								<input
-									type="text"
-									value={newProductSubCategory}
-									onChange={(e) => setNewProductSubCategory(e.target.value)}
-									placeholder="e.g. BATH, CASH, OTHER..."
-									className="p-3 rounded-xl bg-theme-card outline-none text-theme-text"
-								/>
+								{uniqueSubCategories.length > 0 && !isNewSubCategory ? (
+									<select
+										value={newProductSubCategory}
+										onChange={(e) => {
+											if (e.target.value === "__NEW__") {
+												setIsNewSubCategory(true);
+												setNewProductSubCategory("");
+											} else {
+												setNewProductSubCategory(e.target.value);
+											}
+										}}
+										className="p-3 rounded-xl bg-theme-card outline-none text-theme-text appearance-none cursor-pointer"
+									>
+										{!newProductSubCategory && <option value="" disabled>Select sub category</option>}
+										{uniqueSubCategories.map(sub => (
+											<option key={sub as string} value={sub as string}>{sub as string}</option>
+										))}
+										<option value="__NEW__">+ Add New Sub Category</option>
+									</select>
+								) : (
+									<div className="flex gap-2">
+										<input
+											type="text"
+											value={newProductSubCategory}
+											onChange={(e) => setNewProductSubCategory(e.target.value)}
+											placeholder="e.g. BATH, CASH, OTHER..."
+											className="p-3 rounded-xl bg-theme-card outline-none text-theme-text flex-1"
+											autoFocus={isNewSubCategory}
+										/>
+										{uniqueSubCategories.length > 0 && (
+											<button 
+												onClick={() => { setIsNewSubCategory(false); setNewProductSubCategory(uniqueSubCategories[0] as string); }}
+												className="p-3 bg-theme-border rounded-xl text-theme-text/70 hover:text-theme-text transition-colors"
+												title="Choose existing"
+											>
+												<FiX />
+											</button>
+										)}
+									</div>
+								)}
 							</div>
 							<div className="flex flex-col gap-2">
 								<label className="text-sm font-semibold text-theme-text/70 uppercase">
